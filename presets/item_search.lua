@@ -1,5 +1,17 @@
 -- Resolve names once per plugin session, in small batches on the logic tick.
 local index = { entries = {}, next = 0, maxId = 70000 }
+local excludedNameParts = { "(broken)", "(damaged)", "(uncharged)" }
+local excludedNamePrefixes = { "augmented" }
+
+local function isExcluded(lowerName)
+    for _, part in ipairs(excludedNameParts) do
+        if lowerName:find(part, 1, true) then return true end
+    end
+    for _, prefix in ipairs(excludedNamePrefixes) do
+        if lowerName:sub(1, #prefix) == prefix then return true end
+    end
+    return false
+end
 
 function index.step(limit, lookup)
     local last = math.min(index.maxId, index.next + limit - 1)
@@ -9,7 +21,10 @@ function index.step(limit, lookup)
             return obj and obj.name
         end)
         if ok and type(name) == "string" and name:match("%S") and name ~= "null" then
-            index.entries[#index.entries + 1] = { id = itemId, name = name, lower = name:lower() }
+            local lower = name:lower()
+            if not isExcluded(lower) then
+                index.entries[#index.entries + 1] = { id = itemId, name = name, lower = lower }
+            end
         end
     end
     index.next = last + 1
