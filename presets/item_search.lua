@@ -1,7 +1,7 @@
 -- Resolve names once per plugin session, in small batches on the logic tick.
 local index = { entries = {}, next = 0, maxId = 70000 }
 local excludedNameParts = { "(broken)", "(damaged)", "(uncharged)" }
-local excludedNamePrefixes = { "augmented" }
+local excludedNamePrefixes = { "augmented", "broken" }
 
 local function isExcluded(lowerName)
     for _, part in ipairs(excludedNameParts) do

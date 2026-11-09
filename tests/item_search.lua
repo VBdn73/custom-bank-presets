@@ -9,8 +9,8 @@ assert(not search.step(12, function(id)
     return names[id] and { name = names[id] }
 end))
 local results = search.search(" SWORD ")
-assert(#results == 5 and results[1].id == 11 and results[2].id == 1 and results[3].id == 6
-    and results[4].id == 0 and results[5].id == 2)
+assert(#results == 4 and results[1].id == 11 and results[2].id == 1
+    and results[3].id == 0 and results[4].id == 2)
 assert(#search.search("(broken)") == 0 and #search.search("(damaged)") == 0
     and #search.search("(uncharged)") == 0)
 assert(#search.search("  ") == 0 and #search.search("missing") == 0)
