@@ -72,6 +72,13 @@ Customisations can only be edited inside the bank. Display preferences persist a
 Failed saves or customisation swaps attempt best-effort recovery and report failures;
 native bank preset swaps are not undone.
 
+Plugin Hub settings also include an item-name search with a scrollable list, icons,
+and a selected-item preview. Names are indexed in batches after typing, so results
+may be incomplete while indexing. Selection is a preview and does not change a preset.
+The search scans IDs 0–70,000 and may show placeholders, duplicates or inaccessible
+definitions; review it against Jagex's guidelines before distribution. IDs above
+70,000 are not indexed.
+
 ## Permissions and privacy
 
 **Data protection — Case 1 (local only).** No additional permissions, chat access,

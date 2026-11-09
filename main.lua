@@ -34,7 +34,7 @@ end)
 
 Event.SettingsLayerReady.Subscribe("customBankPresets.settings", function(event)
     if destroySettingsView then pcall(destroySettingsView) end
-    local refresh, _, destroy = preferences.build(event.component, settings, prettyUILibrary)
+    local refresh, _, destroy = preferences.build(event.component, settings, prettyUILibrary, true)
     editorRefreshCallbacks.settings, destroySettingsView = refresh, destroy
 end)
 

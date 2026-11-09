@@ -4,7 +4,7 @@ utf8 = nil
 local test = require("tests.test_helper")
 
 for _, suite in ipairs({
-    "slots", "storage", "customisations", "preferences", "icon_catalogue", "backpack_icons", "icons", "icon_text", "icon_picker",
+    "slots", "storage", "customisations", "preferences", "item_search", "item_search_view", "icon_catalogue", "backpack_icons", "icons", "icon_text", "icon_picker",
     "preset_layout", "dropdown", "colours", "main", "reorder", "reorder_wrappers", "text_validation", "preset_names",
     "bank_bindings", "bank_labels", "bank_icons", "compact_icons", "bank_preview", "editor_style", "name_editor", "preset_menu", "editor_popup", "bob",
 }) do

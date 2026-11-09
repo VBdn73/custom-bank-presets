@@ -1,7 +1,18 @@
 -- Settings and ribbon panels share the bank display preferences.
 local preferences = {}
 
-function preferences.build(parent, settings, prettyui)
+function preferences.build(parent, settings, prettyui, showSearch)
+    local host, settingsScroll = parent
+    if showSearch then
+        settingsScroll = prettyui.SimpleView.new(host, {
+            width = math.max(1, host.width), height = math.max(1, host.height),
+        })
+        parent = settingsScroll.content
+    end
+    local resizeSearch, refreshSearch, destroySearch
+    if showSearch then
+        resizeSearch, refreshSearch, destroySearch = require("editor/item_search_view").new(parent, prettyui)
+    end
     local options = {
         { text = "Hide predefined-name dropdown", key = "hideDropdown",
             get = settings.hidePredefinedDropdown, set = settings.setHidePredefinedDropdown },
@@ -34,7 +45,10 @@ function preferences.build(parent, settings, prettyui)
     note.maxLines = 5
     note.clickthrough = true
     local function resize()
-        local width = math.max(1, parent.width - 16)
+        local hostWidth = math.max(1, host.width)
+        local hostHeight = math.max(1, host.height or 1)
+        if settingsScroll then settingsScroll:SetSize(hostWidth, hostHeight) end
+        local width = math.max(1, (settingsScroll and (settingsScroll.contentWidth or hostWidth) or parent.width) - 16)
         -- Reserve room for wrapped checkbox text, not an always-three-line row.
         local rowHeight = width >= 300 and 20 or (width >= 200 and 36 or 54)
         local y = 8
@@ -48,15 +62,27 @@ function preferences.build(parent, settings, prettyui)
             y = y + rowHeight + 8
         end
         note:SetPos(8, y)
-        note:SetSize(width, 64)
+        local noteHeight = width >= 500 and 20 or (width >= 300 and 36 or (width >= 200 and 52 or 70))
+        note:SetSize(width, noteHeight)
+        if resizeSearch then
+            local searchY = y + noteHeight + 4
+            -- Keep at least eight results accessible even in a short settings host.
+            local contentHeight = math.max(hostHeight, searchY + 120 + 240)
+            settingsScroll:SetContentHeight(contentHeight)
+            resizeSearch(searchY, settingsScroll.contentWidth or hostWidth, contentHeight)
+        end
     end
     resize()
-    parent:Subscribe(ui.Hook.ONRESIZE, "customBankPresets.preferences", resize)
+    host:Subscribe(ui.Hook.ONRESIZE, "customBankPresets.preferences", resize)
 
     return function()
         for _, option in ipairs(options) do
             option.checkbox:SetSelected(option.key, option.get(), false)
         end
+        if refreshSearch then refreshSearch() end
+    end, nil, function()
+        if destroySearch then destroySearch() end
+        if settingsScroll then settingsScroll:Destroy() end
     end
 end
 
