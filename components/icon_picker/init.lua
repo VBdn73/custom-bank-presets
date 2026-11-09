@@ -134,13 +134,13 @@ function picker.open(host, options)
             if not closed then closeButton.sprite = id.Sprite.RS3_BTN_MODAL_WINDOW_1_CLOSE_NML end
         end)
         closeButton:Subscribe(ui.Hook.ONCLICK, function() close(); return true end)
-        local name = text(root, 12, footerY + 4, innerWidth, initialName)
+        text(root, 12, footerY + 4, innerWidth, initialName)
         local page = 1
         -- Start on the page containing the current selection.
         for index, entry in ipairs((categories[categoryIndex] or {}).entries or {}) do
             if entry.key == options.initial then page = math.ceil(index / capacity) end
         end
-        local grid, tabFrames, refresh = nil, {}, nil
+        local grid, tooltip, tooltipBackground, tooltipInner, tooltipLabel, tabFrames, refresh = nil, nil, nil, nil, nil, {}, nil
         local searchField
         local function updateSearch(resetPage)
             local entries = {}
@@ -201,7 +201,6 @@ function picker.open(host, options)
             local y = 40 + math.floor((index - 1) / tabColumns) * 32
             button(root, x, y, math.floor(tabWidth) - 2, 28, category.name, function()
                 categoryIndex, page = index, 1
-                name.content = initialName
                 refresh()
             end)
             tabFrames[index] = rectangle(root, x, y, math.floor(tabWidth) - 2, 28, false, theme.border)
@@ -209,6 +208,7 @@ function picker.open(host, options)
         refresh = function()
             if closed then return end
             if grid then grid:Destroy() end
+            if tooltip then tooltip:Destroy() end
             grid = ui.Layer.new(root)
             grid:SetPos(12, gridY)
             grid:SetSize(innerWidth, rows * 44)
@@ -218,9 +218,9 @@ function picker.open(host, options)
             if searchField then searchField.hidden = category ~= searchCategory end
             local entries = category.entries or {}
             if #categories == 0 then
-                name.content = "No icons available."
+                text(grid, 0, 0, innerWidth, "No icons available.")
             elseif #entries == 0 and category.emptyMessage then
-                name.content = category.emptyMessage
+                text(grid, 0, 0, innerWidth, category.emptyMessage)
             end
             if pageLabel then
                 local pages = math.max(1, math.ceil(#entries / capacity))
@@ -269,20 +269,66 @@ function picker.open(host, options)
                         end
                     end
                     local function showName()
-                        if not closed then name.content = entry.name .. (available and "" or " (unavailable)") end
+                        if closed then return end
+                        local label = entry.name .. (available and "" or " (unavailable)")
+                        local font
+                        if config and config.Font and config.Font.FromID then
+                            local ok, result = pcall(config.Font.FromID, tooltipLabel.font)
+                            if ok then font = result end
+                        end
+                        local function measure(value)
+                            if font then
+                                local ok, result = pcall(function() return font:GetStringWidth(value, true) end)
+                                if ok and type(result) == "number" then return result end
+                            end
+                            return #value * 8
+                        end
+                        local tooltipWidth = math.min(width - 8, math.max(60, measure(label) + 16))
+                        local textWidth = math.max(1, tooltipWidth - 12)
+                        local lines, line = 1, ""
+                        for word in label:gmatch("%S+") do
+                            local nextLine = line == "" and word or line .. " " .. word
+                            if line ~= "" and measure(nextLine) > textWidth then
+                                lines, line = lines + 1, word
+                            else
+                                line = nextLine
+                            end
+                        end
+                        local tooltipHeight = math.max(26, lines * 18 + 8)
+                        local tooltipX = math.max(4, math.min(12 + x, width - tooltipWidth - 4))
+                        local tooltipY = gridY + y - tooltipHeight - 2
+                        if tooltipY < gridY then tooltipY = gridY + y + 40 end
+                        tooltipY = math.max(0, math.min(tooltipY, height - tooltipHeight))
+                        tooltip:SetPos(tooltipX, tooltipY)
+                        tooltip:SetSize(tooltipWidth, tooltipHeight)
+                        tooltipBackground:SetSize(tooltipWidth, tooltipHeight)
+                        tooltipInner:SetSize(tooltipWidth - 2, tooltipHeight - 2)
+                        tooltipLabel:SetSize(textWidth, tooltipHeight - 2)
+                        tooltipLabel.maxLines = lines
+                        tooltipLabel.content = label
+                        tooltip.hidden = false
                     end
                     target:Subscribe(ui.Hook.ONMOUSEOVER, showName)
                     -- Native buttons handle activation; ONKEY also exposes the
                     -- label when keyboard interaction is delivered to a tile.
                     target:Subscribe(ui.Hook.ONKEY, showName)
                     target:Subscribe(ui.Hook.ONMOUSELEAVE, function()
-                        if not closed then name.content = initialName end
+                        if not closed then tooltip.hidden = true end
                     end)
                     if entry.key == options.initial then
                         rectangle(grid, x, y, 40, 40, false, theme.border)
                     end
                 end
             end
+            -- Created after the grid so it draws above every icon tile.
+            tooltip = ui.Layer.new(root)
+            tooltip.clickthrough = true
+            tooltipBackground = rectangle(tooltip, 0, 0, 60, 26, true, theme.border)
+            tooltipInner = rectangle(tooltip, 1, 1, 58, 24, true, theme.background)
+            tooltipBackground.clickthrough, tooltipInner.clickthrough = true, true
+            tooltipLabel = text(tooltip, 6, 1, 48, "")
+            tooltipLabel.alignVertical = ui.AlignMode.CENTRE
+            tooltip.hidden = true
         end
         refresh()
         updatePosition()

@@ -124,12 +124,18 @@ test.case("Icon picker selects once, highlights selection and exposes hover/keyb
     test.equal(wide.width, 24)
     test.equal(wide.height, 12)
     local tiles = f.tiles()
+    local selectedName = f.find("Text", function(c) return c.content == "Farming" end)[1]
     tiles[2].hooks.over()
-    test.equal(#f.find("Text", function(c) return c.content == "Wide" end), 1)
+    local hoverName = f.find("Text", function(c) return c.content == "Wide" end)[1]
+    test.equal(selectedName.content, "Farming")
+    test.equal(hoverName.parent.hidden, false)
+    test.equal(hoverName.parent.clickthrough, true)
     tiles[2].hooks.leave()
-    test.equal(#f.find("Text", function(c) return c.content == "Farming" end), 1)
+    test.equal(hoverName.parent.hidden, true)
+    test.equal(selectedName.content, "Farming")
     tiles[2].hooks.key()
-    test.equal(#f.find("Text", function(c) return c.content == "Wide" end), 1)
+    test.equal(hoverName.parent.hidden, false)
+    test.equal(selectedName.content, "Farming")
     tiles[2].hooks.press()
     test.equal(f.selected[1], "skills:wide")
     test.equal(f.root.destroyed, true)
@@ -139,6 +145,24 @@ test.case("Icon picker selects once, highlights selection and exposes hover/keyb
     test.equal(#f.selected, 1)
     test.equal(f.closed, 1)
     test.equal(f.detached, 1)
+end)
+
+test.case("Icon tooltip centres text and grows for wrapped names", function()
+    local f = fixture({ categories = { { key = "test", name = "Test", entries = {
+        { key = "test:long", name = "Custom-fit trimmed masterwork melee platebody", sprite = "FARM" },
+        { key = "test:short", name = "Short", sprite = "FARM" },
+    } } } })
+    f.open()
+    f.tiles()[1].hooks.over()
+    local label = f.find("Text", function(c) return c.content == "Custom-fit trimmed masterwork melee platebody" end)[1]
+    test.equal(label.alignVertical, "centre")
+    test.equal(label.maxLines > 1, true)
+    test.equal(label.parent.height > 26, true)
+    test.equal(label.parent.x + label.parent.width <= f.root.width, true)
+    f.tiles()[2].hooks.over()
+    test.equal(label.maxLines, 1)
+    test.equal(label.parent.height, 26)
+    f.close()
 end)
 
 test.case("Missing resources cannot be selected and cancel leaves staged selection alone", function()
