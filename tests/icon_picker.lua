@@ -96,15 +96,24 @@ test.case("Search tab displays selectable item tiles and paginates results", fun
     f.open()
     local field = f.find("InputField")[1]
     test.equal(field.hidden, true)
+    local normalHeight = f.root.height
+    local normalGridY = f.tiles()[1].parent.y
     f.find("Button", function(c) return c.label == "Search" end)[1].hooks.press()
     test.equal(field.hidden, false)
+    test.equal(f.root.height, normalHeight + 32)
     field.content = "widget"
     field.hooks.change(field, 1)
     test.equal(#f.tiles(), 30)
+    test.equal(f.tiles()[1].parent.y, normalGridY + 32)
     f.tiles()[1].hooks.over()
     test.equal(#f.find("Text", function(c) return c.content == "Widget 1" end), 1)
     f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
     test.equal(#f.tiles(), 5)
+    f.find("Button", function(c) return c.label == "Skills" end)[1].hooks.press()
+    test.equal(f.root.height, normalHeight)
+    test.equal(f.tiles()[1].parent.y, normalGridY)
+    f.find("Button", function(c) return c.label == "Search" end)[1].hooks.press()
+    f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
     f.tiles()[1].hooks.press()
     test.equal(f.selected[1], "item:31")
 end)

@@ -119,8 +119,8 @@ function picker.open(host, options)
         root:SetSize(width, height)
         root.clickthrough = false
         root:Subscribe(ui.Hook.ONCLICK, function() return true end)
-        rectangle(root, 0, 0, width, height, true, theme.border)
-        rectangle(root, 1, 1, width - 2, height - 2, true, theme.background)
+        local backgroundBorder = rectangle(root, 0, 0, width, height, true, theme.border)
+        local background = rectangle(root, 1, 1, width - 2, height - 2, true, theme.background)
         text(root, 12, 8, math.max(1, width - 48), options.title or "Choose preset icon")
         local closeButton = ui.Sprite.new(root)
         closeButton:SetPos(width - 32, 8)
@@ -134,7 +134,7 @@ function picker.open(host, options)
             if not closed then closeButton.sprite = id.Sprite.RS3_BTN_MODAL_WINDOW_1_CLOSE_NML end
         end)
         closeButton:Subscribe(ui.Hook.ONCLICK, function() close(); return true end)
-        text(root, 12, footerY + 4, innerWidth, initialName)
+        local selectedName = text(root, 12, footerY + 4, innerWidth, initialName)
         local page = 1
         -- Start on the page containing the current selection.
         for index, entry in ipairs((categories[categoryIndex] or {}).entries or {}) do
@@ -177,24 +177,28 @@ function picker.open(host, options)
             end
         end
         local reportedErrors = {}
-        local pageLabel, previousButton, nextButton
+        local pageLayer, pageLabel, previousButton, nextButton
         if paginated then
             local spriteButton = assert(options.prettyui and options.prettyui.SpriteButton,
                 "PrettyUI SpriteButton is required for icon picker pagination.")
-            previousButton = spriteButton.new(root, "ARROW_LEFT", function()
+            pageLayer = ui.Layer.new(root)
+            pageLayer:SetPos(0, footerY + 30)
+            pageLayer:SetSize(width, 28)
+            pageLayer.clickthrough = true
+            previousButton = spriteButton.new(pageLayer, "ARROW_LEFT", function()
                 if closed then return end
                 page = math.max(1, page - 1)
                 refresh()
-            end, { x = 12, y = footerY + 30, size = 28 })
-            pageLabel = text(root, 48, footerY + 32, math.max(1, innerWidth - 72), "")
+            end, { x = 12, y = 0, size = 28 })
+            pageLabel = text(pageLayer, 48, 2, math.max(1, innerWidth - 72), "")
             pageLabel.alignHorizontal = ui.AlignMode.CENTRE
-            nextButton = spriteButton.new(root, "ARROW_RIGHT", function()
+            nextButton = spriteButton.new(pageLayer, "ARROW_RIGHT", function()
                 if closed then return end
                 page = math.min(math.max(1, math.ceil(#(categories[categoryIndex].entries or {}) / capacity)), page + 1)
                 refresh()
-            end, { x = width - 40, y = footerY + 30, size = 28 })
+            end, { x = width - 40, y = 0, size = 28 })
         end
-        button(root, 12, height - 40, innerWidth, 28, "Use preset number", function() select("") end)
+        local resetButton = button(root, 12, height - 40, innerWidth, 28, "Use preset number", function() select("") end)
         for index, category in ipairs(categories) do
             local tabWidth = innerWidth / tabColumns
             local x = 12 + math.floor(((index - 1) % tabColumns) * tabWidth)
@@ -209,12 +213,22 @@ function picker.open(host, options)
             if closed then return end
             if grid then grid:Destroy() end
             if tooltip then tooltip:Destroy() end
+            local category = categories[categoryIndex] or {}
+            gridY = searchY + (category == searchCategory and 32 or 0)
+            footerY = gridY + rows * 44
+            height = footerY + (paginated and 100 or 68)
+            root:SetSize(width, height)
+            backgroundBorder:SetSize(width, height)
+            background:SetSize(width - 2, height - 2)
+            selectedName:SetPos(12, footerY + 4)
+            resetButton:SetPos(12, height - 40)
+            if pageLayer then pageLayer:SetPos(0, footerY + 30) end
+            updatePosition()
             grid = ui.Layer.new(root)
             grid:SetPos(12, gridY)
             grid:SetSize(innerWidth, rows * 44)
             grid.clickthrough = true
             for index, frame in ipairs(tabFrames) do frame.hidden = index ~= categoryIndex end
-            local category = categories[categoryIndex] or {}
             if searchField then searchField.hidden = category ~= searchCategory end
             local entries = category.entries or {}
             if #categories == 0 then
