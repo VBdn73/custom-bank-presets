@@ -1,17 +1,13 @@
 -- Settings and ribbon panels share the bank display preferences.
 local preferences = {}
 
-function preferences.build(parent, settings, prettyui, showSearch)
+function preferences.build(parent, settings, prettyui, scrollSettings)
     local host, settingsScroll = parent
-    if showSearch then
+    if scrollSettings then
         settingsScroll = prettyui.SimpleView.new(host, {
             width = math.max(1, host.width), height = math.max(1, host.height),
         })
         parent = settingsScroll.content
-    end
-    local resizeSearch, refreshSearch, destroySearch
-    if showSearch then
-        resizeSearch, refreshSearch, destroySearch = require("editor/item_search_view").new(parent, prettyui)
     end
     local options = {
         { text = "Hide predefined-name dropdown", key = "hideDropdown",
@@ -64,13 +60,7 @@ function preferences.build(parent, settings, prettyui, showSearch)
         note:SetPos(8, y)
         local noteHeight = width >= 500 and 20 or (width >= 300 and 36 or (width >= 200 and 52 or 70))
         note:SetSize(width, noteHeight)
-        if resizeSearch then
-            local searchY = y + noteHeight + 4
-            -- Keep at least eight results accessible even in a short settings host.
-            local contentHeight = math.max(hostHeight, searchY + 120 + 240)
-            settingsScroll:SetContentHeight(contentHeight)
-            resizeSearch(searchY, settingsScroll.contentWidth or hostWidth, contentHeight)
-        end
+        if settingsScroll then settingsScroll:SetContentHeight(y + noteHeight + 8) end
     end
     resize()
     host:Subscribe(ui.Hook.ONRESIZE, "customBankPresets.preferences", resize)
@@ -79,9 +69,7 @@ function preferences.build(parent, settings, prettyui, showSearch)
         for _, option in ipairs(options) do
             option.checkbox:SetSelected(option.key, option.get(), false)
         end
-        if refreshSearch then refreshSearch() end
     end, nil, function()
-        if destroySearch then destroySearch() end
         if settingsScroll then settingsScroll:Destroy() end
     end
 end

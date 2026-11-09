@@ -7,6 +7,7 @@ local function fixture(options)
         if parent then parent.children[#parent.children + 1] = control end
         function control:SetPos(x, y) self.x, self.y = x, y end
         function control:SetSize(w, h) self.width, self.height = w, h end
+        function control:Setup() end
         function control:Subscribe(hook, action) self.hooks[hook] = action end
         function control:Destroy()
             self.destroyed = true
@@ -19,16 +20,18 @@ local function fixture(options)
         return control
     end
     local hooks = { ONCLICK = "click", ONBUTTONPRESSED = "press", ONMOUSEOVER = "over",
-        ONMOUSELEAVE = "leave", ONKEY = "key" }
+        ONMOUSELEAVE = "leave", ONKEY = "key", ONCONTENTCHANGED = "change" }
     local environment = setmetatable({
         print = function(message) f.messages[#f.messages + 1] = message end,
-        ui = { Hook = hooks, AlignMode = { CENTRE = "centre" } },
-        id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { BUTTON_DEFAULT = 1 },
+        ui = { Hook = hooks, AlignMode = { CENTRE = "centre" },
+            TextContentVisibilityMode = { VISIBLE = 1 }, InputFieldFilterMode = { NONE = 1 },
+            InputFieldActionResult = { CONTENT_CHANGE = 1 } },
+        id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { BUTTON_DEFAULT = 1, INPUT_DEFAULT = 2 },
             Sprite = { FARM = 10, WIDE = 11, RS3_BTN_MODAL_WINDOW_1_CLOSE_NML = 20,
                 RS3_BTN_MODAL_WINDOW_1_CLOSE_OVR = 21 } },
         Vector4 = { new = function(...) return { ... } end },
     }, { __index = _G })
-    for _, kind in ipairs({ "Layer", "Rectangle", "Text", "Button", "Sprite" }) do
+    for _, kind in ipairs({ "Layer", "Rectangle", "Text", "Button", "Sprite", "InputField" }) do
         environment.ui[kind] = { new = function(parent) return new(kind, parent) end }
     end
     f.parent = new("host")
@@ -82,6 +85,29 @@ local function fixture(options)
     function f.tiles() return f.find("Button", function(c) return c.label == "" or c.label == "?" end) end
     return f
 end
+
+test.case("Search tab displays selectable item tiles and paginates results", function()
+    local entries = {}
+    for i = 1, 35 do entries[i] = { id = i, name = "Widget " .. i } end
+    local index = { next = 70001, maxId = 70000,
+        search = function(query) return query == "widget" and entries or {} end }
+    local f = fixture({ searchIndex = index, resolve = function(key) return tonumber(key:match("%d+")) end,
+        apply = function(sprite, assetID) sprite.sprite = assetID end })
+    f.open()
+    local field = f.find("InputField")[1]
+    test.equal(field.hidden, true)
+    f.find("Button", function(c) return c.label == "Search" end)[1].hooks.press()
+    test.equal(field.hidden, false)
+    field.content = "widget"
+    field.hooks.change(field, 1)
+    test.equal(#f.tiles(), 30)
+    f.tiles()[1].hooks.over()
+    test.equal(#f.find("Text", function(c) return c.content == "Widget 1" end), 1)
+    f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
+    test.equal(#f.tiles(), 5)
+    f.tiles()[1].hooks.press()
+    test.equal(f.selected[1], "item:31")
+end)
 
 test.case("Icon picker selects once, highlights selection and exposes hover/keyboard labels", function()
     local f = fixture()

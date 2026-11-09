@@ -554,6 +554,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             closePicker, updatePicker = iconPicker.open(host, {
                 prettyui = options.prettyui,
                 categories = backpackIcons.categories(), initial = pendingIcon,
+                searchIndex = require("presets/item_search"),
                 initialName = iconCatalogue.displayName(pendingIcon),
                 resolve = iconCatalogue.resolve, apply = iconCatalogue.apply, anchor = iconControl, theme = theme,
                 attachOverlay = contentHost and contentHost._RegisterOverlay and function(root, updatePosition)

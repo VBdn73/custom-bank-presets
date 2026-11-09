@@ -95,16 +95,9 @@ test.case("Preferences show both display options and bank-only editing guidance"
     assert(ok, message)
 end)
 
-test.case("Settings scrolls to a useful search viewport and adapts to resizing", function()
+test.case("Settings scrolls its preferences and adapts to resizing", function()
     local oldUI, oldID = ui, id
-    local oldSearch = package.loaded["editor/item_search_view"]
     local ok, message = pcall(function()
-        local searchParent, searchY, searchWidth, searchHeight, destroyed
-        package.loaded["editor/item_search_view"] = { new = function(parent)
-            searchParent = parent
-            return function(y, width, height) searchY, searchWidth, searchHeight = y, width, height end,
-                function() end, function() destroyed = true end
-        end }
         local function component()
             return { SetPos = function() end, SetSize = function() end }
         end
@@ -125,20 +118,14 @@ test.case("Settings scrolls to a useful search viewport and adapts to resizing",
             showCompactBackgrounds = function() return true end,
             setShowCompactBackgrounds = function() return true end }
         local _, _, destroy = preferences.build(host, settings, pretty, true)
-        test.equal(searchParent, scroll.content)
-        test.equal(searchY, 104)
-        test.equal(searchWidth, 400)
-        test.equal(searchHeight, 464)
-        test.equal(scroll.contentHeight, 464)
+        test.equal(scroll.contentHeight, 108)
         host.height = 800
         host.resize()
-        test.equal(searchHeight, 800)
-        test.equal(scroll.contentHeight, 800)
+        test.equal(scroll.contentHeight, 108)
+        test.equal(scroll.height, 800)
         destroy()
-        test.equal(destroyed, true)
         test.equal(scroll.destroyed, true)
     end)
     ui, id = oldUI, oldID
-    package.loaded["editor/item_search_view"] = oldSearch
     assert(ok, message)
 end)

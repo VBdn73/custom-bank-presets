@@ -26,6 +26,12 @@ function picker.open(host, options)
             categories[#categories + 1] = category
         end
     end
+    local searchCategory
+    if options.searchIndex then
+        searchCategory = { key = "search", name = "Search", entries = {},
+            emptyMessage = "Search item names." }
+        categories[#categories + 1] = searchCategory
+    end
     local parent = host
     while parent.parent and not parent.parent.isRestricted do parent = parent.parent end
     local root = ui.Layer.new(parent)
@@ -38,7 +44,7 @@ function picker.open(host, options)
         pcall(function() root:Destroy() end)
         if options.onClose then options.onClose() end
     end
-    local width, height
+    local width, height, updateSearchIndex
     local function updatePosition()
         if closed then return end
         local target = options.anchor or host
@@ -90,8 +96,9 @@ function picker.open(host, options)
         local columns = math.max(1, math.floor(innerWidth / 44))
         local tabColumns = math.max(1, math.min(#categories, math.max(1, math.floor(innerWidth / 80))))
         local tabRows = math.max(1, math.ceil(#categories / tabColumns))
-        local gridY = 76 + (tabRows - 1) * 32
-        local largest = 0
+        local searchY = 76 + (tabRows - 1) * 32
+        local gridY = searchY + (searchCategory and 32 or 0)
+        local largest = searchCategory and 1000 or 0
         local categoryIndex = 1
         local initialName = options.initialName or "Use preset number"
         for index, category in ipairs(categories) do
@@ -104,7 +111,7 @@ function picker.open(host, options)
         end
         -- Pagination keeps larger future categories within the same popup layout.
         local rows = math.max(1, math.min(5, math.ceil(largest / columns),
-            math.floor((parent.height - 176 - (tabRows - 1) * 32) / 44)))
+            math.floor((parent.height - 176 - (tabRows - 1) * 32 - (searchCategory and 32 or 0)) / 44)))
         local capacity = rows * columns
         local paginated = largest > capacity
         local footerY = gridY + rows * 44
@@ -134,6 +141,41 @@ function picker.open(host, options)
             if entry.key == options.initial then page = math.ceil(index / capacity) end
         end
         local grid, tabFrames, refresh = nil, {}, nil
+        local searchField
+        local function updateSearch(resetPage)
+            local entries = {}
+            for _, item in ipairs(options.searchIndex.search(searchField.content)) do
+                if item.id > 0 then
+                    entries[#entries + 1] = { key = "item:" .. item.id, name = item.name,
+                        objectID = item.id, width = 36, height = 32 }
+                end
+            end
+            searchCategory.entries = entries
+            searchCategory.emptyMessage = searchField.content:match("%S")
+                and (options.searchIndex.next <= options.searchIndex.maxId and "Indexing items..." or "No items found.")
+                or "Search item names."
+            if resetPage then page = 1 end
+            page = math.min(page, math.max(1, math.ceil(#entries / capacity)))
+            refresh()
+        end
+        if searchCategory then
+            searchField = ui.InputField.new(root)
+            searchField.stylesheetID = id.StyleSheet.INPUT_DEFAULT
+            searchField:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 80)
+            searchField.emptyText, searchField.content = "Search item names", ""
+            searchField:SetPos(12, searchY); searchField:SetSize(innerWidth, 25)
+            searchField:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
+                if reason == ui.InputFieldActionResult.CONTENT_CHANGE then updateSearch(true) end
+                return false
+            end)
+            updateSearchIndex = function()
+                if categories[categoryIndex] ~= searchCategory or not searchField.content:match("%S")
+                    or options.searchIndex.next > options.searchIndex.maxId
+                    or not (config and config.Obj and config.Obj.FromID) then return end
+                local done = options.searchIndex.step(500, config.Obj.FromID)
+                if done or options.searchIndex.next % 5000 == 0 then updateSearch(false) end
+            end
+        end
         local reportedErrors = {}
         local pageLabel, previousButton, nextButton
         if paginated then
@@ -173,6 +215,7 @@ function picker.open(host, options)
             grid.clickthrough = true
             for index, frame in ipairs(tabFrames) do frame.hidden = index ~= categoryIndex end
             local category = categories[categoryIndex] or {}
+            if searchField then searchField.hidden = category ~= searchCategory end
             local entries = category.entries or {}
             if #categories == 0 then
                 name.content = "No icons available."
@@ -252,7 +295,10 @@ function picker.open(host, options)
         pcall(function() root:Destroy() end)
         error(err, 0)
     end
-    return close, updatePosition
+    return close, function()
+        updatePosition()
+        if not closed and updateSearchIndex then updateSearchIndex() end
+    end
 end
 
 return picker
