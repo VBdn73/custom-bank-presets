@@ -59,11 +59,13 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(first.root.x, 274)
     test.equal(first.root.y, math.floor((890 - first.root.height) / 2))
     test.equal(first.options.scrollable, false)
+    test.equal(first.options.title, "Custom bank preset 18")
     test.equal(built[1].slot, 18)
     test.equal(built[1].options.contentHost, first)
     test.equal(built[1].options.prettyui, library, "Bank editor forwards PrettyUI to the icon picker")
     test.equal(built[1].options.hideTitle, true)
     test.equal(built[1].options.readOnlyPreset, true)
+    test.equal(built[1].options.hidePresetHeading, true)
     test.equal(built[1].options.externalInfoButton, true)
     test.equal(built[1].options.infoParent, first.root)
     local info = sprites[1]
@@ -86,6 +88,11 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(first.destroyed, nil, "Fresh native wrappers must not close the popup")
     popup.select(3)
     test.equal(selected[#selected], 3, "Native selection selects the preset to edit")
+    test.equal(first.titleText.content, "Custom bank preset 3")
+    popup.select(0)
+    test.equal(first.titleText.content, "Custom bank preset 3", "Invalid selections leave the title unchanged")
+    popup.select(19)
+    test.equal(first.titleText.content, "Custom bank preset - BoB")
     test.equal(#windows, 1, "Switch presets without rebuilding the window")
     info.isMouseOver = true
     popup.update()
@@ -123,11 +130,11 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     popup.open(1, {}, { labels = bindings.labels, colours = {} }, library)
     local layout = require("editor/layout")
     test.equal(built[#built].options.formHeight,
-        layout.compactBodyHeight + layout.colourHeight - layout.popupEditorGapReduction)
+        layout.compactBodyHeight + layout.colourHeight - layout.popupEditorGapReduction - layout.popupHeadingRemoval)
     test.equal(windows[#windows].content.height, built[#built].options.formHeight)
     popup.open(1, {}, { labels = bindings.labels, colours = {}, icons = {} }, library)
     test.equal(built[#built].options.formHeight,
-        layout.compactBodyHeight + layout.colourHeight + layout.iconHeight - layout.popupEditorGapReduction)
+        layout.compactBodyHeight + layout.colourHeight + layout.iconHeight - layout.popupEditorGapReduction - layout.popupHeadingRemoval)
     test.equal(windows[#windows].content.height, built[#built].options.formHeight)
     popup.close()
     local count = #windows

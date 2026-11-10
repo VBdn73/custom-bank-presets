@@ -1368,6 +1368,25 @@ test.case("Editor icon choices are staged, previewed, saved and restored on reop
     test.equal(f:iconNumber().hidden, true)
 end)
 
+test.case("Popup removes the preset heading and its space while retaining unsaved feedback", function()
+    local f = createFixture({ get = function() return "" end })
+    local layout = require("editor/layout")
+    local height = layout.compactBodyHeight + layout.colourHeight
+        - layout.popupEditorGapReduction - layout.popupHeadingRemoval
+    f.parent.height = height
+    f:open(18, { hideTitle = true, readOnlyPreset = true, hidePresetHeading = true, formHeight = height })
+    local indicator
+    for _, control in ipairs(f.controls) do
+        test.equal(control.content == "Preset 18 - Last preset", false)
+        if control.content == "Unsaved" then indicator = control end
+    end
+    test.equal(f.input.y, layout.padding)
+    test.equal(f.status.y + f.status.height <= height, true)
+    f.input.content = "Changed"
+    f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input)
+    test.equal(indicator.hidden, false)
+end)
+
 test.case("Editor item previews use the available space without overlapping the control arrow", function()
     local f = iconFixture()
     f:stageIcon("item:31725")
@@ -1490,6 +1509,35 @@ test.case("BoB hides icon controls and unavailable sprites retain the preview nu
     test.equal(f:iconButton().hidden, true)
     f:clickReset()
     f:clickSave()
+end)
+
+test.case("BoB removes the unused icon row when switching presets", function()
+    local f = createFixture()
+    f.bindings = dofile("bank/bindings.lua")
+    ui.Interfaces = { GetComponent = function() return nil end }
+    f.bindings.colours = { get = function() return "" end, save = function() return true end }
+    f.bindings.icons = { get = function() return "" end, save = function() return true end,
+        normalize = function(value) return value end }
+    f.bindings.iconText = { get = function() return "" end, save = function() return true end,
+        normalize = function(value) return value end }
+    local first = #f.controls + 1
+    f:open(1, { hideTitle = true, readOnlyPreset = true, hidePresetHeading = true })
+    local iconText, colour
+    for index = first, #f.controls do
+        local control = f.controls[index]
+        if control.content == "Icon text:" then iconText = control end
+        if control.content == "Background colour:" then colour = control end
+    end
+    local textY, colourY, saveY = iconText.y, colour.y, f.save.y
+    f.selectSlot(19)
+    local row = require("editor/layout").iconHeight
+    test.equal(iconText.y, textY - row)
+    test.equal(colour.y, colourY - row)
+    test.equal(f.save.y, saveY - row)
+    f.selectSlot(1)
+    test.equal(iconText.y, textY)
+    test.equal(colour.y, colourY)
+    test.equal(f.save.y, saveY)
 end)
 
 test.case("The real icon picker stages an available catalogue entry in the editor", function()

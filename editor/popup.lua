@@ -1,7 +1,7 @@
 local nameEditor = require("editor/view")
-local constants = require("constants")
 local layout = require("editor/layout")
 local icons = require("editor/icon")
+local slots = require("presets/slots")
 local popup = {}
 local window, refresh, bankIsOpen, updateInfo, infoButton
 local positionKey = "presetEditor.position.v1"
@@ -9,9 +9,18 @@ local lastX, lastY
 local savedPosition
 local destroyEditor
 local selectSlot
+local entryCount
+
+local function titleFor(slot)
+    return slot == slots.bob and "Custom bank preset - BoB"
+        or "Custom bank preset " .. slot
+end
 
 function popup.select(slot)
-    if window and selectSlot and slot then selectSlot(slot) end
+    if window and selectSlot and slots.valid(slot, entryCount) then
+        selectSlot(slot)
+        window.titleText.content = titleFor(slot)
+    end
 end
 
 local function loadPosition()
@@ -85,21 +94,23 @@ function popup.open(slot, names, bindings, prettyui)
     local bodyHeight = layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0)
         + (bindings.icons and layout.iconHeight or 0)
         + (bindings.iconText and layout.iconTextHeight or 0)
-        - layout.popupEditorGapReduction
+        - layout.popupEditorGapReduction - layout.popupHeadingRemoval
     -- PrettyUI chrome uses a 32px title and 8px bottom/side borders.
     local width, height = layout.width + 16, bodyHeight + 32 + 8
     local ok, message = pcall(function()
         window = prettyui.Window.new(parent, {
-            title = constants.editorTitle, width = width, height = height,
+            title = titleFor(slot), width = width, height = height,
             x = math.max(0, math.min(lastX or math.floor((parent.width - width) / 2), parent.width - width)),
             y = math.max(0, math.min(lastY or math.floor((parent.height - height) / 2), parent.height - height)),
             scrollable = false, onClose = popup.close,
         })
         local toggleInfo
         refresh, toggleInfo, destroyEditor, selectSlot = nameEditor.build(window.content, names, bindings, slot, {
-            hideTitle = true, readOnlyPreset = true, externalInfoButton = true, infoParent = window.root,
+            hideTitle = true, readOnlyPreset = true, hidePresetHeading = true,
+            externalInfoButton = true, infoParent = window.root,
             contentHost = window, formHeight = bodyHeight, prettyui = prettyui,
         })
+        entryCount = bindings.entryCount or bindings.presetCount
         -- The drag handle is a sibling above the window, so the header icon
         -- must also be an overlay rather than a child underneath that handle.
         infoButton, updateInfo = icons.info(parent, toggleInfo)

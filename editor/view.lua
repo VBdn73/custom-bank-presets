@@ -59,6 +59,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     if bindings.icons then contentHeight = contentHeight + layout.iconHeight end
     if bindings.iconText then contentHeight = contentHeight + layout.iconTextHeight end
     local headingGapReduction = options.readOnlyPreset and layout.popupEditorGapReduction or 0
+    if options.hidePresetHeading then headingGapReduction = headingGapReduction + layout.popupHeadingRemoval end
     contentHeight = contentHeight - headingGapReduction
     local controlPositions = {}
     local function trackPosition(component, x, y)
@@ -78,11 +79,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
         trackPosition(createText(parent, constants.editorTitle), layout.padding, layout.rows.title)
     end
     local presetSelector, presetHeading
-    if options.readOnlyPreset then
+    if options.readOnlyPreset and not options.hidePresetHeading then
         presetHeading = createText(parent, "")
         presetHeading.clickthrough = true
         trackPosition(presetHeading, layout.padding, layout.rows.selector)
-    else
+    elseif not options.readOnlyPreset then
         presetSelector = ui.List.new(parent)
         trackPosition(presetSelector, layout.padding, layout.rows.selector)
         presetSelector:SetSize(layout.controlWidth, layout.fieldHeight)
@@ -92,7 +93,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     local presetLabels = {}
     local function refreshPresetLabels()
-        if presetHeading then
+        if options.readOnlyPreset then
+            if not presetHeading then return end
             local name = names.get(selectedSlot)
             presetHeading.content = slots.title(selectedSlot) .. (name and name ~= "" and " - " .. name or "")
             return
@@ -179,7 +181,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local iconComponents = {}
     local iconHidden = {}
     local unsavedIcon, unsavedLabel
-    if presetHeading then
+    if options.readOnlyPreset then
         unsavedIcon = ui.Sprite.new(parent)
         unsavedIcon.sprite = id.Sprite.RS3_ICON_EDIT_23PX_0
         unsavedIcon.clickthrough = true
@@ -688,11 +690,13 @@ function editor.build(parent, names, bindings, initialSlot, options)
         }).root
     end
 
+    local centreContent
     local function selectSlot(slot)
         if not slots.valid(slot, entryCount) or slot == selectedSlot then return end
         selectedSlot = slot
         if presetSelector then presetSelector:SetEntrySelected(slot - 1, true, false) end
         refreshSelectedName()
+        if centreContent then centreContent() end
     end
 
     -- Wire user actions after the controls and their shared state exist.
@@ -873,7 +877,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             if position.y + titleOffset >= layout.rows.input then
                 y = y - headingGapReduction
             end
-            if bindings.icons and not iconComponents[control]
+            if bindings.icons and slots.valid(selectedSlot) and not iconComponents[control]
                 and position.y + titleOffset >= layout.rows.colourLabel - 3 then
                 y = y + layout.iconHeight
             end
@@ -925,7 +929,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
     end
 
-    local function centreContent()
+    centreContent = function()
         dismissPicker()
         local size = sizeContent()
         positionControls(size, buildCompactRowMapping())
