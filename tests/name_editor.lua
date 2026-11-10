@@ -1535,7 +1535,7 @@ test.case("BoB hides icon controls and unavailable sprites retain the preview nu
     f:clickSave()
 end)
 
-test.case("BoB removes the unused icon row when switching presets", function()
+test.case("BoB hides icon and icon text rows when switching presets", function()
     local f = createFixture()
     f.bindings = dofile("bank/bindings.lua")
     ui.Interfaces = { GetComponent = function() return nil end }
@@ -1553,12 +1553,15 @@ test.case("BoB removes the unused icon row when switching presets", function()
         if control.content == "Background colour" then colour = control end
     end
     local textY, colourY, saveY = iconText.y, colour.y, f.save.y
+    test.equal(iconText.hidden, false)
     f.selectSlot(19)
     local row = require("editor/layout").iconHeight
     test.equal(iconText.y, textY - row)
-    test.equal(colour.y, colourY - row)
-    test.equal(f.save.y, saveY - row)
+    test.equal(iconText.hidden, true)
+    test.equal(colour.y, colourY - row - require("editor/layout").iconTextHeight)
+    test.equal(f.save.y, saveY - row - require("editor/layout").iconTextHeight)
     f.selectSlot(1)
+    test.equal(iconText.hidden, false)
     test.equal(iconText.y, textY)
     test.equal(colour.y, colourY)
     test.equal(f.save.y, saveY)

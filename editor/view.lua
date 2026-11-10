@@ -248,6 +248,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
         return ok
     end
     local function refreshIcon()
+        local supported = slots.valid(selectedSlot)
+        for component in pairs(iconTextComponents) do
+            component.hidden = not supported
+            iconHidden[component] = not supported
+        end
         local _, entry = iconCatalogue.resolve(pendingIcon)
         local isItem = entry and entry.objectID
         local active = applyIcon(previewSkillIcon, isItem and 28 or 24, isItem and 30 or 24)
@@ -272,7 +277,6 @@ function editor.build(parent, names, bindings, initialSlot, options)
             end
         end
         if iconControl then
-            local supported = slots.valid(selectedSlot)
             for component in pairs(iconComponents) do
                 component.hidden = not supported
                 iconHidden[component] = not supported
@@ -679,7 +683,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local saveSucceeded, message = persistence.save(selectedSlot, {
             name = value, background = pendingColours.background, text = pendingColours.text,
             icon = bindings.icons and pendingIcon or nil,
-            iconText = iconTextInput and (iconTextInput.content or "") or nil,
+            iconText = iconTextInput and slots.valid(selectedSlot) and (iconTextInput.content or "") or nil,
         })
         setStatus(message, saveSucceeded)
         refreshUnsavedChanges()
@@ -894,7 +898,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 and position.y + titleOffset >= layout.rows.colourLabel - 3 then
                 y = y + layout.iconHeight
             end
-            if bindings.iconText and not iconComponents[control] and not iconTextComponents[control]
+            if bindings.iconText and slots.valid(selectedSlot) and not iconComponents[control] and not iconTextComponents[control]
                 and position.y + titleOffset >= layout.rows.colourLabel - 3 then
                 y = y + layout.iconTextHeight
             end
