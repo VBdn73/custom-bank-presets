@@ -244,37 +244,37 @@ end)
 test.case("Category tabs wrap into readable rows without overlapping the grid", function()
     local f = fixture()
     f.options.categories = {}
-    for _, name in ipairs({ "Skills", "Weapons", "Holidays", "Misc", "Bag" }) do
+    for _, name in ipairs({ "Skills", "Alpha", "Beta", "Misc", "Extra" }) do
         f.options.categories[#f.options.categories + 1] = { key = name, name = name, entries = {
             { key = name .. ":item", name = name .. " item", sprite = "FARM" },
         } }
     end
     f.open()
-    local weapons = f.find("Button", function(c) return c.label == "Weapons" end)[1]
-    local holidays = f.find("Button", function(c) return c.label == "Holidays" end)[1]
-    local bag = f.find("Button", function(c) return c.label == "Bag" end)[1]
-    test.equal(weapons.width >= 78, true)
-    test.equal(holidays.width >= 78, true)
-    test.equal(bag.y > weapons.y, true)
-    test.equal(f.tiles()[1].parent.y >= bag.y + bag.height, true)
-    holidays.hooks.press()
+    local alpha = f.find("Button", function(c) return c.label == "Alpha" end)[1]
+    local beta = f.find("Button", function(c) return c.label == "Beta" end)[1]
+    local extra = f.find("Button", function(c) return c.label == "Extra" end)[1]
+    test.equal(alpha.width >= 78, true)
+    test.equal(beta.width >= 78, true)
+    test.equal(extra.y > alpha.y, true)
+    test.equal(f.tiles()[1].parent.y >= extra.y + extra.height, true)
+    beta.hooks.press()
     test.equal(#f.tiles(), 1)
     f.tiles()[1].hooks.press()
-    test.equal(f.selected[1], "Holidays:item")
+    test.equal(f.selected[1], "Beta:item")
 end)
 
-test.case("Empty categories are hidden but the backpack can explain its purpose", function()
+test.case("Empty categories can be hidden or show a message", function()
     local f = fixture()
-    f.options.categories[2] = { key = "backpack", name = "Bag", entries = {}, showWhenEmpty = true,
-        emptyMessage = "Add items to Bag to use as icons." }
+    f.options.categories[2] = { key = "empty", name = "Extra", entries = {}, showWhenEmpty = true,
+        emptyMessage = "No entries yet." }
     f.options.categories[3] = { key = "bosses", name = "Bosses", entries = {} }
     f.open()
     test.equal(#f.find("Button", function(c) return c.label == "Bosses" end), 0)
     test.equal(#f.tiles(), 3)
-    f.find("Button", function(c) return c.label == "Bag" end)[1].hooks.press()
+    f.find("Button", function(c) return c.label == "Extra" end)[1].hooks.press()
     test.equal(#f.tiles(), 0)
     test.equal(#f.find("Text", function(c)
-        return c.content == "Add items to Bag to use as icons."
+        return c.content == "No entries yet."
     end), 1)
     f.close()
 end)
@@ -286,18 +286,6 @@ test.case("Picker allows resetting when all categories are empty", function()
     test.equal(#f.find("Text", function(c) return c.content == "No icons available." end), 1)
     f.find("Button", function(c) return c.label == "Use preset number" end)[1].hooks.press()
     test.equal(f.selected[1], "")
-end)
-
-test.case("Backpack tiles show the item name and select its stable ID", function()
-    local f = fixture({ categories = { { key = "backpack", name = "Bag", entries = {
-        { key = "item:31725", name = "Noxious scythe", objectID = 31725, width = 36, height = 32 },
-    } } }, resolve = function() return 31725 end,
-        apply = function(sprite, assetID) sprite.sprite = assetID end })
-    f.open()
-    f.tiles()[1].hooks.over()
-    test.equal(#f.find("Text", function(c) return c.content == "Noxious scythe" end), 1)
-    f.tiles()[1].hooks.press()
-    test.equal(f.selected[1], "item:31725")
 end)
 
 test.case("Larger categories paginate and start on the selected entry's page", function()
@@ -318,28 +306,6 @@ test.case("Larger categories paginate and start on the selected entry's page", f
     f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
     f.tiles()[2].hooks.press()
     test.equal(f.selected[1], "test:32")
-end)
-
-test.case("Weapons tab paginates finished weapons and selects their stable keys", function()
-    local catalogue = require("presets/icon_catalogue")
-    local applied = {}
-    local f = fixture({ categories = catalogue.categories,
-        resolve = function() return 99 end,
-        apply = function(sprite, assetID, entry)
-            sprite.sprite = assetID
-            applied[#applied + 1] = entry.key
-        end })
-    f.open()
-    f.find("Button", function(c) return c.label == "Weapons" end)[1].hooks.press()
-    test.equal(#f.tiles(), 30)
-    test.equal(applied[#applied], catalogue.categories[2].entries[30].key)
-    local weapon = f.find("Sprite", function(c) return c.sprite == 99 and c.width == 36 end)[1]
-    test.equal(weapon.height, 32)
-    test.equal(weapon.x >= 0 and weapon.x + weapon.width <= 40, true)
-    test.equal(weapon.y >= 0 and weapon.y + weapon.height <= 40, true)
-    f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
-    f.tiles()[1].hooks.press()
-    test.equal(f.selected[1], catalogue.categories[2].entries[31].key)
 end)
 
 test.case("The complete Skills category fits the standard grid and narrower UIs paginate", function()

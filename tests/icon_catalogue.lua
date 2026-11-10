@@ -9,7 +9,7 @@ test.case("Skill catalogue has 29 unique keys in native skill-list order", funct
         "runecrafting", "slayer", "farming", "construction", "hunter", "summoning",
         "dungeoneering", "divination", "invention", "archaeology", "necromancy",
     }
-    test.equal(#catalogue.categories, 5)
+    test.equal(#catalogue.categories, 3)
     local category = catalogue.categories[1]
     test.equal(category.key, "skills")
     test.equal(category.name, "Skills")
@@ -27,92 +27,15 @@ test.case("Skill catalogue has 29 unique keys in native skill-list order", funct
 end)
 
 test.case("Bosses category is reserved for suitable icons", function()
-    local category = catalogue.categories[5]
+    local category = catalogue.categories[3]
     test.equal(category.key, "bosses")
     test.equal(category.name, "Bosses")
     test.equal(#category.entries, 0)
     test.equal(catalogue.get("bosses:nex"), nil)
 end)
 
-test.case("Weapons have unique stable keys, valid item IDs and alphabetical ordering", function()
-    local category = catalogue.categories[2]
-    test.equal(category.key, "weapons90")
-    test.equal(category.name, "Weapons")
-    local previous, seen = "", {}
-    for _, entry in ipairs(category.entries) do
-        test.equal(entry.category, "weapons90")
-        test.equal(seen[entry.key], nil)
-        seen[entry.key] = true
-        test.equal(entry.name:lower() >= previous, true)
-        previous = entry.name:lower()
-        test.equal(entry.objectID > 0 and entry.objectID % 1 == 0, true)
-        test.equal(catalogue.resolve(entry.key, {}), entry.objectID)
-        test.equal(entry.width, 36)
-        test.equal(entry.height, 32)
-    end
-    test.equal(catalogue.get("weapons90:malachis-tooth").objectID, 64341,
-        "Beta client uses 64341 for the crossbow; 64191 is a cure potion")
-    test.equal(catalogue.get("weapons90:elder-crossbow").objectID, 63579,
-        "Beta client uses 63579 for Elder crossbow; 63315 is a trophy")
-end)
-
-test.case("Holiday tab exposes unique seasonal item artwork and named sprites", function()
-    local category = catalogue.categories[3]
-    test.equal(category.key, "holidays")
-    test.equal(category.name, "Holidays")
-    test.equal(#category.entries, 44)
-    local seen, seenItems = {}, {}
-    for _, entry in ipairs(category.entries) do
-        test.equal(entry.category, category.key)
-        test.equal(seen[entry.key], nil)
-        seen[entry.key] = true
-        test.equal(catalogue.get(entry.key), entry)
-        if entry.objectID then
-            test.equal(seenItems[entry.objectID], nil)
-            seenItems[entry.objectID] = true
-            test.equal(entry.objectID > 0 and entry.objectID % 1 == 0, true)
-            test.equal(catalogue.resolve(entry.key, {}), entry.objectID)
-        else
-            test.equal(catalogue.resolve(entry.key, {}), nil)
-            test.equal(catalogue.resolve(entry.key, { [entry.sprite] = 123 }), 123)
-        end
-    end
-    test.equal(catalogue.get("holidays:pumpkin").objectID, 1959)
-    test.equal(catalogue.get("holidays:easter-egg").objectID, 1961)
-    test.equal(catalogue.get("holidays:christmas-tree-hat").objectID, 26493)
-    local expected = {
-        ["christmas-cracker"] = 962, ["bunny-ears"] = 1037,
-        ["rubber-chicken"] = 4566, ["easter-basket"] = 54618,
-        ["yo-yo"] = 4079, ["reindeer-hat"] = 10507,
-        ["scythe"] = 1419,
-        ["christmas-scythe"] = 33625, ["festive-scythe"] = 52757,
-        ["red-partyhat"] = 1038, ["yellow-partyhat"] = 1040,
-        ["blue-partyhat"] = 1042, ["green-partyhat"] = 1044,
-        ["purple-partyhat"] = 1046, ["white-partyhat"] = 1048,
-        ["pink-partyhat"] = 37590, ["golden-partyhat"] = 52664,
-        ["black-partyhat"] = 56161, ["chromatic-partyhat"] = 34358,
-        ["santa-hat"] = 1050, ["black-santa-hat"] = 30412,
-        ["green-santa-hat"] = 52748, ["purple-santa-hat"] = 56222,
-        ["pink-santa-hat"] = 57941, ["aurora-santa-hat"] = 58273,
-        ["yellow-santa-hat"] = 60016, ["blue-santa-hat"] = 60020,
-        ["festive-aurora-santa-hat"] = 60115,
-        ["green-halloween-mask"] = 1053, ["blue-halloween-mask"] = 1055,
-        ["red-halloween-mask"] = 1057, ["purple-halloween-mask"] = 53982,
-        ["orange-halloween-mask"] = 55968, ["yellow-halloween-mask"] = 59820,
-        ["soul-halloween-mask"] = 59823, ["pink-halloween-mask"] = 63952,
-    }
-    for key, objectID in pairs(expected) do
-        test.equal(catalogue.get("holidays:" .. key).objectID, objectID, key)
-    end
-    for _, colour in ipairs({ "light-blue", "dark-blue", "white", "purple", "red", "green", "pink" }) do
-        test.equal(catalogue.get("holidays:" .. colour .. "-easter-egg"), nil,
-            "Retired coloured eggs must not expose placeholder artwork")
-    end
-    for objectID = 4558, 4564 do test.equal(seenItems[objectID], nil) end
-end)
-
 test.case("Misc tab exposes coin variants, achievements, clues and utility artwork", function()
-    local category = catalogue.categories[4]
+    local category = catalogue.categories[2]
     test.equal(category.key, "misc")
     test.equal(category.name, "Misc")
     test.equal(#category.entries, 37)
@@ -167,7 +90,7 @@ test.case("Native item assignment hides quantities and clears when returning to 
         test.equal(quantity, nil, "Icon assignment must omit the optional native Uint64 quantity")
         self.associatedObjectID, self.associatedObjectQuantity = objectID, quantity
     end
-    local asset, entry = catalogue.resolve("weapons90:noxious-scythe")
+    local asset, entry = catalogue.resolve("item:31725")
     catalogue.apply(sprite, asset, entry)
     test.equal(sprite.associatedObjectID, 31725)
     test.equal(sprite.associatedObjectQuantityMode, 0)
@@ -175,62 +98,6 @@ test.case("Native item assignment hides quantities and clears when returning to 
     test.equal(sprite.associatedObjectID, -1)
     test.equal(sprite.spriteID, 123)
     ui = oldUI
-end)
-
-test.case("Weapons tab includes finished weapons with valid tiers, sorted unique item artwork", function()
-    local category = catalogue.categories[2]
-    test.equal(category.key, "weapons90")
-    local previous, seen = "", {}
-    for _, entry in ipairs(category.entries) do
-        test.equal(entry.category, category.key)
-        test.equal(catalogue.get(entry.key), entry)
-        test.equal(catalogue.resolve(entry.key), entry.objectID)
-        test.equal(entry.tier >= 90 and entry.tier <= 100, true)
-        test.equal(entry.objectID > 0 and entry.objectID % 1 == 0, true)
-        test.equal(seen[entry.objectID], nil)
-        seen[entry.objectID] = true
-        test.equal(entry.name:lower() >= previous, true)
-        previous = entry.name:lower()
-        test.equal(entry.name:lower():find("dormant", 1, true), nil)
-    end
-    for _, key in ipairs({ "eldritch-crossbow", "fractured-staff-of-armadyl",
-        "bow-of-the-last-guardian", "abyssal-scourge", "masterwork-spear-of-annihilation",
-        "death-guard-tier-90-", "masterwork-2h-sword", "masterwork-bow", "masterwork-staff" }) do
-        test.equal(catalogue.get("weapons90:" .. key) ~= nil, true, key)
-    end
-    test.equal(catalogue.get("weapons90:dragon-2h-sword"), nil)
-    test.equal(#category.entries, 55)
-    for _, entry in ipairs(category.entries) do
-        for _, family in ipairs({ "promethium", "grave creeper", "spiritbloom", "empowered catalytic" }) do
-            test.equal(entry.name:lower():find(family, 1, true), nil,
-                "Daemonheim-only weapons must not appear in the picker")
-        end
-    end
-    test.equal(catalogue.get("weapons90:ruinous-rapier").objectID, 61452,
-        "Surface-usable Dungeoneering rewards remain available")
-    test.equal(catalogue.get("weapons:dragon-2h-sword"), nil,
-        "The old Weapons category is no longer registered")
-end)
-
-test.case("Weapon tab retains main-hand, two-handed and selected off-hand icons", function()
-    local expected = {
-        [26587] = "Drygore longsword",
-        [31725] = "Noxious scythe",
-        [40659] = "Khopesh of Elidinis",
-        [52057] = "Dark Sliver of Leng",
-        [28621] = "Seismic singularity",
-        [39579] = "Imperium core",
-        [57158] = "Ode to Deceit",
-        [55542] = "Skull lantern (tier 90)",
-        [55482] = "Soulbound lantern",
-    }
-    local present = {}
-    for _, entry in ipairs(catalogue.categories[2].entries) do
-        present[entry.objectID] = entry.name
-    end
-    for objectID, name in pairs(expected) do
-        test.equal(present[objectID], name, "Missing weapon artwork: " .. name)
-    end
 end)
 
 test.case("Catalogue preserves the visually confirmed Challenge mapping and chosen Necromancy", function()
@@ -271,4 +138,11 @@ test.case("Catalogue safely falls back for defaults, unknown keys and missing re
     test.equal(resolved, entry)
     test.equal(catalogue.resolve(entry.key, { [entry.sprite] = 456 }), 456,
         "Resource IDs are resolved afresh rather than cached or persisted")
+end)
+
+test.case("Removed categories fall back to preset numbers", function()
+    for _, key in ipairs({ "weapons90:noxious-scythe", "holidays:pumpkin" }) do
+        test.equal(catalogue.get(key), nil)
+        test.equal(catalogue.resolve(key), nil)
+    end
 end)

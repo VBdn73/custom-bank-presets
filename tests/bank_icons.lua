@@ -158,7 +158,7 @@ end)
 
 test.case("Item icons use a larger centered canvas while staying within row height", function()
     local f = fixture()
-    f.selected[1], f.selected[2] = "weapons90:noxious-scythe", "skills:farming"
+    f.selected[1], f.selected[2] = "item:31725", "skills:farming"
     f.update()
     local item, skill = f.sprites[1], f.sprites[2]
     test.equal(item.width, 32)

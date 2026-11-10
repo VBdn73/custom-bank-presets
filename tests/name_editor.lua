@@ -1575,7 +1575,7 @@ test.case("The real icon picker stages an available catalogue entry in the edito
     tile.hooks[ui.Hook.ONBUTTONPRESSED]()
     test.equal(f:iconWrites(), 0)
     f:clickSave()
-    test.equal(f.iconData[1], "skills:runecrafting")
+    test.equal(f.iconData[1], "skills:attack")
 end)
 
 test.case("Icon row aligns above colours and fits narrow clipped layouts", function()

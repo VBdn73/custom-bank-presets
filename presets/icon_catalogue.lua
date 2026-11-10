@@ -1,8 +1,6 @@
 -- Add a category module here to expose another tab; picker and storage need no changes.
 local catalogue = { categories = {
     (require("presets/icon_categories/skills")),
-    (require("presets/icon_categories/weapons")),
-    (require("presets/icon_categories/holidays")),
     (require("presets/icon_categories/misc")),
     (require("presets/icon_categories/bosses")),
 } }
@@ -22,11 +20,11 @@ end
 function catalogue.get(key)
     if type(key) ~= "string" then return nil end
     if byKey[key] then return byKey[key] end
-    -- Dynamic backpack selections remain usable after the item leaves the inventory.
+    -- Item search selections are stored by object ID.
     local digits = key:match("^item:([1-9]%d*)$")
     local objectID = digits and tonumber(digits)
     if not objectID or objectID > 2147483647 or tostring(objectID) ~= digits then return nil end
-    return { key = key, category = "backpack", name = "Item " .. digits,
+    return { key = key, category = "item", name = "Item " .. digits,
         objectID = objectID, width = 36, height = 32 }
 end
 
@@ -43,7 +41,7 @@ end
 function catalogue.displayName(key)
     local entry = catalogue.get(key)
     if not entry then return nil end
-    if entry.category == "backpack" then
+    if entry.category == "item" then
         local ok, object = pcall(function()
             return config and config.Obj and config.Obj.FromID(entry.objectID)
         end)

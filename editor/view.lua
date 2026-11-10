@@ -4,7 +4,6 @@ local theme = require("editor/theme")
 local icons = require("editor/icon")
 local colourPicker = require("components/colour_picker/init")
 local iconPicker = require("components/icon_picker/init")
-local backpackIcons = require("presets/backpack_icons")
 local iconCatalogue = require("presets/icon_catalogue")
 local colourValue = require("presets/colour_value")
 local slots = require("presets/slots")
@@ -563,7 +562,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local slot, context = selectedSlot, names.getContext()
             closePicker, updatePicker = iconPicker.open(host, {
                 prettyui = options.prettyui,
-                categories = backpackIcons.categories(), initial = pendingIcon,
+                categories = iconCatalogue.categories, initial = pendingIcon,
                 searchIndex = require("presets/item_search"),
                 initialName = iconCatalogue.displayName(pendingIcon),
                 resolve = iconCatalogue.resolve, apply = iconCatalogue.apply, anchor = iconControl, theme = theme,

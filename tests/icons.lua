@@ -29,7 +29,7 @@ local function fixture()
         function(value) mode = value end, function() return reads, writes end, load
 end
 
-test.case("Backpack item icon persists without an inventory snapshot", function()
+test.case("Item icon persists across reloads", function()
     local icons, _, _, _, _, reload = fixture()
     test.equal(icons.save(1, "item:31725"), true)
     test.equal(reload().get(1), "item:31725")
