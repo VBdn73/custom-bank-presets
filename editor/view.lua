@@ -336,10 +336,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         alignmentContent, alignmentWidth, alignmentHeight, alignmentFont = content, width, height, fontID
         -- Native fields honour text alignment only for their placeholder.
         -- Move the editable origin, retaining native caret and selection.
-        local left = 8
-        if content ~= "" then
-            left = math.min(255, math.max(8, math.floor((width - textWidth - 2) / 2)))
-        end
+        local left = math.min(255, math.max(8, math.floor((width - textWidth - 2) / 2)))
         -- Centre the visible glyph bounds, not the font's line spacing.
         -- Native inputs place the baseline at top + font.baseline.
         local centredBaseline = math.floor((height - font.maxAscent - font.maxDescent) / 2)

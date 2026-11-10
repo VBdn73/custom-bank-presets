@@ -590,9 +590,12 @@ test.case("Entered preview names centre using measured margins and retain long-n
         test.equal(f.input.contentMargin.left, 8, "Long names retain the normal input area")
         f:clickReset()
         f.refresh()
-        test.equal(f.input.contentMargin.left, 8, "Empty input restores symmetric placeholder margins")
+        test.equal(f.input.contentMargin.left, math.floor((f.input.width - 2) / 2),
+            "Empty input places the caret at the centred typing origin")
         f.parent.width = 580
         f.parent.hooks[ui.Hook.ONRESIZE]()
+        test.equal(f.input.contentMargin.left, math.floor((f.input.width - 2) / 2),
+            "Empty caret remains centred after resizing")
     end
 end)
 
