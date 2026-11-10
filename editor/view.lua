@@ -359,6 +359,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
     local colourControls = {}
+    local colourSwatches = {}
     local updateColourResetIcons = {}
     local defaultMarks = {}
     local defaultMarkKinds = {}
@@ -423,18 +424,20 @@ function editor.build(parent, names, bindings, initialSlot, options)
             label.clickthrough = true
             colourLabels[kind] = label
             trackPosition(label, layout.padding, y)
-            local border = ui.Rectangle.new(parent)
-            border:SetSize(34, 22)
-            border.fill = true
-            border.colour = theme.colour(theme.border)
+            local border = ui.Button.new(parent)
+            border:SetSize(58, 26)
+            border.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
+            border.label = ""
             border.clickthrough = true
-            trackPosition(border, layout.swatchX - 1, y - 1)
+            trackPosition(border, layout.swatchX, y - 3)
+            colourSwatches[border] = true
             local control = ui.Rectangle.new(parent)
-            control:SetSize(32, 20)
+            control:SetSize(54, 20)
             control.fill = true
             control.clickthrough = false
-            trackPosition(control, layout.swatchX, y)
+            trackPosition(control, layout.swatchX + 2, y)
             colourControls[kind] = control
+            colourSwatches[control] = true
             local resetColour, updateReset = icons.new(parent,
                 id.Sprite.RS3_ICON_STOPWATCH_RESET_0,
                 id.Sprite.RS3_ICON_STOPWATCH_RESET_1,
@@ -446,20 +449,20 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 refreshUnsavedChanges()
             end)
             resetColour:SetSize(22, 22)
-            trackPosition(resetColour, layout.swatchX + (bindings.icons and 66 or 40), y - 1)
+            trackPosition(resetColour, layout.swatchX + 66, y - 1)
             updateColourResetIcons[#updateColourResetIcons + 1] = updateReset
             defaultMarks[kind] = {}
             -- Draw thin diagonals with native rectangles, without relying on
             -- rotation support. Keep a small inset inside the swatch border.
-            for column = 0, 27 do
-                local offset = math.floor(column * 15 / 27 + 0.5)
+            for column = 0, 49 do
+                local offset = math.floor(column * 15 / 49 + 0.5)
                 for _, row in ipairs({ offset, 15 - offset }) do
                     local mark = ui.Rectangle.new(parent)
                     mark:SetSize(1, 1)
                     mark.fill = true
                     mark.colour = theme.colour({ 1, 1, 1, 1 })
                     mark.clickthrough = true
-                    trackPosition(mark, layout.swatchX + 2 + column, y + 2 + row)
+                    trackPosition(mark, layout.swatchX + 4 + column, y + 2 + row)
                     defaultMarks[kind][#defaultMarks[kind] + 1] = mark
                     defaultMarkKinds[mark] = kind
                 end
@@ -854,10 +857,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local isColumn = position.width == layout.buttonWidth
                 or (bindings.colours and position.y + titleOffset == layout.rows.colourLabel)
             local availableWidth = isColumn and buttonWidth or controlWidth
-            local isSwatch = position.x >= layout.swatchX - 1 and (position.width <= 34 or control == iconControl or control == iconTextInput)
+            local isSwatch = position.x >= layout.swatchX - 1 and (position.width <= 34 or colourSwatches[control] or control == iconControl or control == iconTextInput)
             local isColourLabel = control == colourLabels.background or control == colourLabels.text or control == iconLabel or control == iconTextLabel
             local swatchX = math.max(layout.padding, math.min(layout.swatchX,
-                width - layout.padding - (bindings.icons and 88 or 62)))
+                width - layout.padding - 88))
             if isSwatch then
                 availableWidth = position.width
                 x = swatchX + position.x - layout.swatchX

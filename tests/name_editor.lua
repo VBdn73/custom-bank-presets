@@ -400,7 +400,7 @@ test.case("Bottom buttons save and reset names and staged colours for the select
     local f = createFixture(colours)
     local controls = {}
     for _, control in ipairs(f.controls) do
-        if control.kind == "rectangle" and control.width == 32 then controls[#controls + 1] = control end
+        if control.kind == "rectangle" and control.width == 54 then controls[#controls + 1] = control end
     end
     local function choose(index, hex)
         controls[index].hooks[ui.Hook.ONCLICK]()
@@ -702,7 +702,7 @@ test.case("Colour swatches toggle their picker and switch between colours", func
     local f = createFixture({ get = function() return "" end })
     local swatches = {}
     for _, control in ipairs(f.controls) do
-        if control.kind == "rectangle" and control.width == 32 then
+        if control.kind == "rectangle" and control.width == 54 then
             swatches[#swatches + 1] = control
         end
     end
@@ -738,7 +738,7 @@ test.case("Open colour pickers close on slot changes, character changes, hide an
     local f = createFixture({ get = function() return "" end })
     local swatch
     for _, control in ipairs(f.controls) do
-        if control.kind == "rectangle" and control.width == 32 then swatch = control; break end
+        if control.kind == "rectangle" and control.width == 54 then swatch = control; break end
     end
     local function open()
         local first = #f.controls + 1
@@ -776,27 +776,29 @@ test.case("Default colour swatches show clickthrough white diagonal crosses", fu
             test.equal(control.colour[3], 1)
         end
     end
-    test.equal(#marks, 112)
-    for column = 1, 27 do
+    test.equal(#marks, 200)
+    for column = 1, 49 do
         local previous, current = marks[column * 2 - 1], marks[column * 2 + 1]
         test.equal(current.x - previous.x, 1, "Diagonal segments have no horizontal gaps")
         test.equal(math.abs(current.y - previous.y) <= 1, true, "Diagonal remains connected")
     end
     f.refresh()
     for index, mark in ipairs(marks) do
-        test.equal(mark.hidden, index > 56, "Only default colours show the cross")
+        test.equal(mark.hidden, index > 100, "Only default colours show the cross")
     end
 end)
 
 test.case("Colour labels and swatches share aligned rows and separate columns", function()
     local f = createFixture({ get = function() return "" end })
-    local labels, swatches = {}, {}
+    local labels, swatches, frames = {}, {}, {}
     for _, control in ipairs(f.controls) do
         test.equal(control.content == "-", false, "Default swatches have no dash")
         if control.content == "Background colour:" or control.content == "Text colour:" then
             labels[#labels + 1] = control
-        elseif control.kind == "rectangle" and control.width == 32 then
+        elseif control.kind == "rectangle" and control.width == 54 then
             swatches[#swatches + 1] = control
+        elseif control.kind == "button" and control.width == 58 and control.height == 26 and control.clickthrough then
+            frames[#frames + 1] = control
         end
     end
     for _, size in ipairs({ { 580, 360 }, { 352, 258 }, { 200, 246 } }) do
@@ -805,7 +807,10 @@ test.case("Colour labels and swatches share aligned rows and separate columns", 
         for index = 1, 2 do
             test.equal(labels[index].y, swatches[index].y)
             test.equal(labels[index].height, swatches[index].height)
-            test.equal(labels[index].x + labels[index].width + 6, swatches[index].x)
+            test.equal(labels[index].x + labels[index].width + 6, frames[index].x)
+            test.equal(frames[index].stylesheetID, id.StyleSheet.BUTTON_DEFAULT)
+            test.equal(swatches[index].x, frames[index].x + 2)
+            test.equal(swatches[index].y, frames[index].y + 3)
         end
         test.equal(swatches[1].x, swatches[2].x)
     end
@@ -817,7 +822,7 @@ test.case("Colour swatches retain their size and fit narrow scrolled panels", fu
     f:open(nil, { scrollable = true })
     local swatches = 0
     for _, control in ipairs(f.controls) do
-        if control.parent == f.scrollView.content and control.kind == "rectangle" and control.width == 32 then
+        if control.parent == f.scrollView.content and control.kind == "rectangle" and control.width == 54 then
             swatches = swatches + 1
             test.equal(control.x + control.width <= f.scrollView.contentWidth, true)
             test.equal(control.height, 20)
@@ -1428,7 +1433,7 @@ test.case("Icon and colour pickers are mutually exclusive and same-button clicks
     f:openIcons()
     local swatch
     for _, c in ipairs(f.controls) do
-        if c.kind == "rectangle" and c.width == 32 and c.height == 20 then swatch = swatch or c end
+        if c.kind == "rectangle" and c.width == 54 and c.height == 20 then swatch = swatch or c end
     end
     swatch.hooks[ui.Hook.ONCLICK]()
     test.equal(f.iconPopups[2].closed, true)
