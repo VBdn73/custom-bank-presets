@@ -53,13 +53,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
     local contentWidth = layout.width
-    local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
-    if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
-    if bindings.icons then contentHeight = contentHeight + layout.iconHeight end
-    if bindings.iconText then contentHeight = contentHeight + layout.iconTextHeight end
     local headingGapReduction = options.readOnlyPreset and layout.popupEditorGapReduction or 0
     if options.hidePresetHeading then headingGapReduction = headingGapReduction + layout.popupHeadingRemoval end
-    contentHeight = contentHeight - headingGapReduction
     local controlPositions = {}
     local function trackPosition(component, x, y)
         controlPositions[#controlPositions + 1] = {
@@ -814,9 +809,15 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     local function sizeContent()
         local hostHeight = options.formHeight or host.height
+        -- Fixed-size hosts keep their established centering; popup hosts fit
+        -- the rows that are actually visible for the selected slot.
+        local numbered = not options.formHeight or slots.valid(selectedSlot)
+        local extraHeight = (numbered and bindings.icons and layout.iconHeight or 0)
+            + (numbered and bindings.iconText and layout.iconTextHeight or 0)
+        local contentHeight = (options.hideTitle and layout.compactBodyHeight or layout.compactHeight)
+            + (bindings.colours and layout.colourHeight or 0) + extraHeight - headingGapReduction
         local minimumHeight = (bindings.colours and layout.minimumColourHeight or layout.minimumHeight)
-            + (bindings.icons and layout.iconHeight or 0)
-            + (bindings.iconText and layout.iconTextHeight or 0)
+            + extraHeight
             - (options.hideTitle and layout.titleHeight or 0)
             - headingGapReduction
         local overflowing = scrollView ~= nil and host.height < minimumHeight

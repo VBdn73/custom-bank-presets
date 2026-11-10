@@ -53,6 +53,10 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
         w.root:SetSize(options.width, options.height)
         w.content = control(w.root)
         w.content:SetSize(options.width - 16, options.height - 40)
+        function w:SetSize(width, height)
+            self.root:SetSize(width, height)
+            self.content:SetSize(width - 16, height - 40)
+        end
         function w:Destroy() self.destroyed = true end
         windows[#windows + 1] = w
         return w
@@ -66,6 +70,8 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     local popup = dofile("editor/popup.lua")
     package.loaded["editor/view"] = previousEditor
     local bindings = require("bank/bindings")
+    bindings = { labels = bindings.labels, presetCount = bindings.presetCount,
+        entryCount = bindings.entryCount, colours = {}, icons = {}, iconText = {} }
     popup.open(18, {}, bindings, library)
     local first = windows[1]
     test.equal(first.root.parent, root, "Host is outside the bank popover")
@@ -135,6 +141,20 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(first.titleText.content, "Custom bank preset 3", "Invalid selections leave the title unchanged")
     popup.select(19)
     test.equal(first.titleText.content, "Custom bank preset - BoB")
+    local layout = require("editor/layout")
+    local bobHeight = layout.compactBodyHeight + layout.colourHeight
+        - layout.popupEditorGapReduction - layout.popupHeadingRemoval
+    test.equal(first.content.height, bobHeight, "BoB omits both icon rows")
+    test.equal(built[1].options.formHeight, bobHeight)
+    test.equal(rectangles[1].height, bobHeight, "Tint follows window height")
+    popup.select(3)
+    test.equal(first.content.height, bobHeight + layout.iconHeight + layout.iconTextHeight,
+        "Switching back restores both icon rows")
+    first.root:SetPos(100, root.height - first.root.height)
+    popup.select(19)
+    popup.select(3)
+    test.equal(first.root.y, root.height - first.root.height, "Growing stays inside the parent")
+    first.root:SetPos(100, 120)
     test.equal(#windows, 1, "Switch presets without rebuilding the window")
     info.isMouseOver = true
     popup.update()
@@ -172,7 +192,6 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     end
     source = { parent = bank, visibleGlobal = true }
     popup.open(1, {}, { labels = bindings.labels, colours = {} }, library)
-    local layout = require("editor/layout")
     test.equal(built[#built].options.formHeight,
         layout.compactBodyHeight + layout.colourHeight - layout.popupEditorGapReduction - layout.popupHeadingRemoval)
     test.equal(windows[#windows].content.height, built[#built].options.formHeight)
@@ -180,6 +199,8 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(built[#built].options.formHeight,
         layout.compactBodyHeight + layout.colourHeight + layout.iconHeight - layout.popupEditorGapReduction - layout.popupHeadingRemoval)
     test.equal(windows[#windows].content.height, built[#built].options.formHeight)
+    popup.open(19, {}, bindings, library)
+    test.equal(windows[#windows].content.height, bobHeight, "Opening BoB starts at the compact height")
     popup.close()
     local count = #windows
     source.visibleGlobal = false

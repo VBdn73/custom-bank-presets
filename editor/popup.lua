@@ -10,6 +10,7 @@ local savedPosition
 local destroyEditor
 local selectSlot
 local entryCount
+local resizeForSlot
 
 local function titleFor(slot)
     return slot == slots.bob and "Custom bank preset - BoB"
@@ -18,6 +19,7 @@ end
 
 function popup.select(slot)
     if window and selectSlot and slots.valid(slot, entryCount) then
+        resizeForSlot(slot)
         selectSlot(slot)
         window.titleText.content = titleFor(slot)
     end
@@ -50,6 +52,7 @@ loadPosition()
 
 function popup.close()
     selectSlot = nil
+    resizeForSlot = nil
     if destroyEditor then pcall(destroyEditor); destroyEditor = nil end
     rememberPosition()
     if lastX and lastY then
@@ -86,10 +89,14 @@ function popup.open(slot, names, bindings, prettyui)
             binding.categoryID, binding.dynamicID)
         return current and not current.isRestricted and current.visibleGlobal
     end
-    local bodyHeight = layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0)
-        + (bindings.icons and layout.iconHeight or 0)
-        + (bindings.iconText and layout.iconTextHeight or 0)
-        - layout.popupEditorGapReduction - layout.popupHeadingRemoval
+    local function bodyHeightFor(selected)
+        local numbered = slots.valid(selected)
+        return layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0)
+            + (numbered and bindings.icons and layout.iconHeight or 0)
+            + (numbered and bindings.iconText and layout.iconTextHeight or 0)
+            - layout.popupEditorGapReduction - layout.popupHeadingRemoval
+    end
+    local bodyHeight = bodyHeightFor(slot)
     -- PrettyUI chrome uses a 32px title and 8px bottom/side borders.
     local width, height = layout.width + 16, bodyHeight + 32 + 8
     local ok, message = pcall(function()
@@ -111,13 +118,23 @@ function popup.open(slot, names, bindings, prettyui)
         backgroundTint.colour = Vector4.new(1, 0.9, 0.8, 0.035)
         backgroundTint.clickthrough = true
         local toggleInfo
-        refresh, toggleInfo, destroyEditor, selectSlot = nameEditor.build(window.content, names, bindings, slot, {
+        local editorOptions = {
             hideTitle = true, readOnlyPreset = true, hidePresetHeading = true,
             externalInfoButton = true, infoParent = window.root,
             contentHost = window, formHeight = bodyHeight, prettyui = prettyui,
             bankButtons = true,
-        })
+        }
+        refresh, toggleInfo, destroyEditor, selectSlot = nameEditor.build(window.content, names, bindings, slot, editorOptions)
         entryCount = bindings.entryCount or bindings.presetCount
+        resizeForSlot = function(selected)
+            local newBodyHeight = bodyHeightFor(selected)
+            editorOptions.formHeight = newBodyHeight
+            window:SetSize(width, newBodyHeight + 32 + 8)
+            backgroundTint:SetSize(window.content.width, window.content.height)
+            local x = math.max(0, math.min(window.root.x, parent.width - window.root.width))
+            local y = math.max(0, math.min(window.root.y, parent.height - window.root.height))
+            if x ~= window.root.x or y ~= window.root.y then window.root:SetPos(x, y) end
+        end
         infoButton, updateInfo = icons.info(window.root, toggleInfo)
         closeButton, updateClose = icons.close(window.root, popup.close)
         infoButton:SetPos(-52, 7, 1, 0)
