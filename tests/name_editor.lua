@@ -207,6 +207,29 @@ local function createFixture(colours, iconStore)
     return f
 end
 
+test.case("Bank popup field labels match the unsaved indicator", function()
+    local f = createFixture()
+    f.bindings = { presetCount = 18,
+        colours = { get = function() return "" end },
+        icons = { get = function() return "" end },
+        iconText = { get = function() return "" end } }
+    local first = #f.controls + 1
+    f:open(1, { hideTitle = true, readOnlyPreset = true, bankButtons = true })
+    local labels, unsaved = {}, nil
+    for index = first, #f.controls do
+        local control = f.controls[index]
+        if control.content == "Unsaved" then unsaved = control end
+        if control.content == "Icon" or control.content == "Icon text"
+            or control.content == "Background colour" or control.content == "Text colour" then
+            labels[#labels + 1] = control
+        end
+    end
+    test.equal(#labels, 4)
+    for _, label in ipairs(labels) do
+        for channel = 1, 4 do test.equal(label.colour[channel], unsaved.colour[channel]) end
+    end
+end)
+
 test.case("Icon text previews, validates, saves and resets without changing bank icons", function()
     local f = createFixture()
     local saved = {}
@@ -225,7 +248,7 @@ test.case("Icon text previews, validates, saves and resets without changing bank
     for index = first, #f.controls do
         local control = f.controls[index]
         if control.kind == "input" and control.limit == 3 then input = control end
-        if control.content == "Icon text:" then label = control end
+        if control.content == "Icon text" then label = control end
     end
     test.equal(label ~= nil, true)
     input.content = "A1"
@@ -797,7 +820,7 @@ test.case("Colour labels and swatches share aligned rows and separate columns", 
     local labels, swatches, frames = {}, {}, {}
     for _, control in ipairs(f.controls) do
         test.equal(control.content == "-", false, "Default swatches have no dash")
-        if control.content == "Background colour:" or control.content == "Text colour:" then
+        if control.content == "Background colour" or control.content == "Text colour" then
             labels[#labels + 1] = control
         elseif control.kind == "rectangle" and control.width == 54 then
             swatches[#swatches + 1] = control
@@ -1526,8 +1549,8 @@ test.case("BoB removes the unused icon row when switching presets", function()
     local iconText, colour
     for index = first, #f.controls do
         local control = f.controls[index]
-        if control.content == "Icon text:" then iconText = control end
-        if control.content == "Background colour:" then colour = control end
+        if control.content == "Icon text" then iconText = control end
+        if control.content == "Background colour" then colour = control end
     end
     local textY, colourY, saveY = iconText.y, colour.y, f.save.y
     f.selectSlot(19)
@@ -1559,8 +1582,8 @@ test.case("Icon row aligns above colours and fits narrow clipped layouts", funct
     local f = iconFixture(false)
     local iconLabel, colourLabel
     for _, c in ipairs(f.controls) do
-        if c.content == "Icon:" then iconLabel = c end
-        if c.content == "Background colour:" then colourLabel = c end
+        if c.content == "Icon" then iconLabel = c end
+        if c.content == "Background colour" then colourLabel = c end
     end
     test.equal(colourLabel.y - iconLabel.y, require("editor/layout").iconHeight)
     test.equal(iconLabel.x, colourLabel.x)

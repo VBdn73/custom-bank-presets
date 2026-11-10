@@ -418,7 +418,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
     if bindings.colours then
         for index, kind in ipairs({ "background", "text" }) do
             local y = layout.rows.colourLabel + (index - 1) * 32
-            local label = createText(parent, kind == "background" and "Background colour:" or "Text colour:", smallFont)
+            local label = createText(parent, kind == "background" and "Background colour" or "Text colour", smallFont)
+            if options.bankButtons then label.colour = theme.colour(theme.titleText) end
             label:SetSize(layout.swatchX - layout.padding - 6, 20)
             label.clickthrough = true
             colourLabels[kind] = label
@@ -509,7 +510,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
             iconComponents[component] = true
             return trackPosition(component, x, y)
         end
-        iconLabel = createText(parent, "Icon:", smallFont)
+        iconLabel = createText(parent, "Icon", smallFont)
+        if options.bankButtons then iconLabel.colour = theme.colour(theme.titleText) end
         iconLabel:SetSize(layout.swatchX - layout.padding - 6, 20)
         iconLabel.clickthrough = true
         trackIcon(iconLabel, layout.padding, layout.rows.colourLabel)
@@ -584,7 +586,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end)
     end
     if bindings.iconText then
-        iconTextLabel = createText(parent, "Icon text:", smallFont)
+        iconTextLabel = createText(parent, "Icon text", smallFont)
+        if options.bankButtons then iconTextLabel.colour = theme.colour(theme.titleText) end
         iconTextLabel:SetSize(layout.swatchX - layout.padding - 6, 20)
         iconTextLabel.clickthrough = true
         iconTextComponents[iconTextLabel] = true

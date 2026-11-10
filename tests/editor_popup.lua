@@ -21,7 +21,15 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
         function c:Destroy() self.destroyed = true end
         return c
     end
+    local previousVector4 = Vector4
+    Vector4 = { new = function(...) return { ... } end }
+    local rectangles = {}
     ui = { Interfaces = { GetComponent = function() return source end },
+        Rectangle = { new = function(parent)
+            local c = control(parent)
+            rectangles[#rectangles + 1] = c
+            return c
+        end },
         Sprite = { new = function(parent)
             local c = control(parent)
             sprites[#sprites + 1] = c
@@ -74,6 +82,12 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(built[1].options.externalInfoButton, true)
     test.equal(built[1].options.bankButtons, true)
     test.equal(first.background.sprite, nil, "Keep the window's existing background")
+    test.equal(rectangles[1].parent, first.content)
+    test.equal(rectangles[1].width, first.content.width)
+    test.equal(rectangles[1].height, first.content.height)
+    test.equal(rectangles[1].fill, true)
+    test.equal(rectangles[1].clickthrough, true)
+    test.equal(rectangles[1].colour[4], 0.035)
     test.equal(first.titleText.font, nil, "Keep the window's existing title font")
     test.equal(first.titleText.rgba, 0xD6A65CFF)
     test.equal(first.closeButton.hidden, true, "Use the native close sprite instead of PrettyUI's modal icon")
@@ -188,4 +202,5 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(bounded.root.y, math.min(120, math.max(0, root.height - bounded.root.height)))
     reloaded.close()
     PersistentDB = previousDB
+    Vector4 = previousVector4
 end)

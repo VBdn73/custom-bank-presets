@@ -103,6 +103,13 @@ function popup.open(slot, names, bindings, prettyui)
         -- bank's background component can expose an empty sprite, and font
         -- IDs which are not present in the client do not render any text.
         window.titleText.rgba = 0xD6A65CFF
+        -- Lift the tiled body slightly to match the native bank's warmer background.
+        -- Create it before the form so controls remain above the tint.
+        local backgroundTint = ui.Rectangle.new(window.content)
+        backgroundTint:SetSize(window.content.width, window.content.height)
+        backgroundTint.fill = true
+        backgroundTint.colour = Vector4.new(1, 0.9, 0.8, 0.035)
+        backgroundTint.clickthrough = true
         local toggleInfo
         refresh, toggleInfo, destroyEditor, selectSlot = nameEditor.build(window.content, names, bindings, slot, {
             hideTitle = true, readOnlyPreset = true, hidePresetHeading = true,
