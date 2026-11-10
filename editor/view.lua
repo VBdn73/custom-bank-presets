@@ -175,7 +175,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local iconComponents = {}
     local iconHidden = {}
     local unsavedIcon, unsavedLabel
-    if options.readOnlyPreset then
+    if options.readOnlyPreset and not options.compactFeedback then
         unsavedIcon = ui.Sprite.new(parent)
         unsavedIcon.sprite = id.Sprite.RS3_ICON_EDIT_23PX_0
         unsavedIcon.clickthrough = true
@@ -346,15 +346,37 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
 
     local statusLabel = createText(parent, "", smallFont)
+    if options.compactFeedback then statusLabel.maxLines = 3 end
     if bindings.colours then
         statusLabel:SetSize(layout.controlWidth, layout.noteHeight)
     end
     trackPosition(statusLabel, layout.padding,
         bindings.colours and layout.rows.colourStatus or layout.rows.status)
-    local function setStatus(message, succeeded)
+    local saveButton, resetButton, centreContent
+    local feedbackTicks, feedbackError, dirtyState, defaultsStaged = 0, false, false, false
+    local function updateButtonLabels()
+        if not options.compactFeedback then return end
+        if saveButton then saveButton.label = feedbackTicks > 0 and "Saved" or (dirtyState and "Save *" or "Save") end
+        if resetButton then resetButton.label = defaultsStaged and "Defaults staged" or "Reset" end
+    end
+    local function setStatus(message, succeeded, action)
+        if options.compactFeedback then
+            feedbackTicks = succeeded and action == "save" and 120 or 0
+            defaultsStaged = succeeded and action == "reset"
+            local showError = not succeeded and message ~= nil and message ~= ""
+            if feedbackError ~= showError then
+                feedbackError = showError
+                if options.onFeedbackHeight then options.onFeedbackHeight(showError) end
+                if centreContent then centreContent() end
+            end
+            statusLabel.content = showError and message or ""
+            updateButtonLabels()
+        else
         statusLabel.content = message
+        end
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
+    local function clearStatus() setStatus("", true) end
     local colourControls = {}
     local colourSwatches = {}
     local updateColourResetIcons = {}
@@ -442,7 +464,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 id.Sprite.RS3_ICON_STOPWATCH_RESET_2, function()
                 dismissPicker()
                 pendingColours[kind] = ""
-                statusLabel.content = ""
+                clearStatus()
                 refreshColours()
                 refreshUnsavedChanges()
             end)
@@ -490,7 +512,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                     onChange = function(value)
                     if selectedSlot ~= slot or names.getContext() ~= context then return end
                     pendingColours[kind] = value
-                    statusLabel.content = ""
+                    clearStatus()
                     refreshColours()
                     refreshUnsavedChanges()
                     end,
@@ -545,7 +567,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             id.Sprite.RS3_ICON_STOPWATCH_RESET_2, function()
                 dismissPicker()
                 pendingIcon = ""
-                statusLabel.content = ""
+                clearStatus()
                 refreshIcon()
                 refreshUnsavedChanges()
             end)
@@ -573,7 +595,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 onSelect = function(value)
                     if selectedSlot ~= slot or names.getContext() ~= context then return end
                     pendingIcon = value
-                    statusLabel.content = ""
+                    clearStatus()
                     refreshIcon()
                     refreshUnsavedChanges()
                 end,
@@ -606,7 +628,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             id.Sprite.RS3_ICON_STOPWATCH_RESET_0, id.Sprite.RS3_ICON_STOPWATCH_RESET_1,
             id.Sprite.RS3_ICON_STOPWATCH_RESET_2, function()
                 iconTextInput.content = ""
-                statusLabel.content = ""
+                clearStatus()
                 refreshIcon()
                 refreshUnsavedChanges()
             end)
@@ -638,6 +660,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
         if bindings.icons then dirty = dirty or pendingIcon ~= (bindings.icons.get(selectedSlot) or "") end
         if iconTextInput then dirty = dirty or (iconTextInput.content or "") ~= bindings.iconText.get(selectedSlot) end
+        dirtyState = dirty
+        updateButtonLabels()
         if unsavedIcon then
             unsavedIcon.hidden, unsavedLabel.hidden = not dirty, not dirty
             iconHidden[unsavedIcon], iconHidden[unsavedLabel] = not dirty, not dirty
@@ -663,7 +687,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         nameInput.content = names.get(selectedSlot) or ""
         refreshInputAlignment()
         refreshUnsavedChanges()
-        statusLabel.content = displayedCharacterContext and "" or "Log in and wait for your character name."
+        setStatus(displayedCharacterContext and "" or "Log in and wait for your character name.", displayedCharacterContext ~= nil)
     end
 
     local function saveValue(value)
@@ -680,7 +704,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             icon = bindings.icons and pendingIcon or nil,
             iconText = iconTextInput and slots.valid(selectedSlot) and (iconTextInput.content or "") or nil,
         })
-        setStatus(message, saveSucceeded)
+        setStatus(message, saveSucceeded, "save")
         refreshUnsavedChanges()
         return saveSucceeded
     end
@@ -702,7 +726,6 @@ function editor.build(parent, names, bindings, initialSlot, options)
         }).root
     end
 
-    local centreContent
     local function selectSlot(slot)
         if not slots.valid(slot, entryCount) or slot == selectedSlot then return end
         selectedSlot = slot
@@ -721,8 +744,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
     end) end
     local buttonsY = bindings.colours and layout.rows.colourButtons or layout.rows.buttons
-    trackPosition(actionButton("Save", saveInput), layout.padding, buttonsY)
-    trackPosition(actionButton("Reset", function()
+    saveButton = trackPosition(actionButton("Save", saveInput), layout.padding, buttonsY)
+    resetButton = trackPosition(actionButton("Reset", function()
         dismissPicker()
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
@@ -736,16 +759,18 @@ function editor.build(parent, names, bindings, initialSlot, options)
         refreshColours()
         refreshIcon()
         refreshUnsavedChanges()
-        setStatus("Defaults staged. Click Save to apply.", true)
+        setStatus("Defaults staged. Click Save to apply.", true, "reset")
     end), layout.resetX, buttonsY)
     if managedInput then
         managedInput.onSubmit = saveInput
         managedInput.onChange = function()
+            clearStatus()
             refreshInputAlignment()
             refreshUnsavedChanges()
         end
     else
         nameInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
+            clearStatus()
             refreshInputAlignment()
             refreshUnsavedChanges()
             if reason == ui.InputFieldActionResult.SUBMIT then
@@ -755,7 +780,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     if iconTextInput then
         local function changed()
-            statusLabel.content = ""
+            clearStatus()
             refreshIcon()
             refreshUnsavedChanges()
         end
@@ -820,6 +845,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
             + extraHeight
             - (options.hideTitle and layout.titleHeight or 0)
             - headingGapReduction
+        if options.compactFeedback then
+            local adjustment = feedbackError and layout.popupErrorExtraHeight or -layout.popupFeedbackHeight
+            contentHeight = contentHeight + adjustment
+            minimumHeight = minimumHeight + adjustment
+        end
         local overflowing = scrollView ~= nil and host.height < minimumHeight
         local compact = hostHeight < contentHeight
         local titleOffset = options.hideTitle and layout.titleHeight or 0
@@ -895,6 +925,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
             if position.y + titleOffset >= layout.rows.input then
                 y = y - headingGapReduction
             end
+            if options.compactFeedback and (control == saveButton or control == resetButton) then
+                y = y - 8
+            end
             if bindings.icons and slots.valid(selectedSlot) and not iconComponents[control]
                 and position.y + titleOffset >= layout.rows.colourLabel - 3 then
                 y = y + layout.iconHeight
@@ -912,6 +945,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
             control:SetPos(offsetX + x, offsetY + y)
             if control == statusLabel and unsavedIcon then
                 control:SetSize(math.max(1, controlWidth - 82), position.height)
+            elseif control == statusLabel and options.compactFeedback then
+                control:SetSize(controlWidth, layout.noteHeight + layout.popupErrorExtraHeight)
             elseif control == unsavedIcon then
                 control:SetSize(18, 18)
                 control:SetPos(offsetX + layout.padding + controlWidth - 80, offsetY + y)
@@ -970,6 +1005,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     -- Called by main.lua each logic tick, not only when the editor is opened.
     return function()
+        if feedbackTicks > 0 then
+            feedbackTicks = feedbackTicks - 1
+            if feedbackTicks == 0 then updateButtonLabels() end
+        end
         if host.visibleGlobal == false then dismissPicker() end
         if updatePicker then updatePicker() end
         updateClipping()

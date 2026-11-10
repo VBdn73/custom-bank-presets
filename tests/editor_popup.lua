@@ -143,13 +143,19 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(first.titleText.content, "Custom bank preset - BoB")
     local layout = require("editor/layout")
     local bobHeight = layout.compactBodyHeight + layout.colourHeight
-        - layout.popupEditorGapReduction - layout.popupHeadingRemoval
+        - layout.popupEditorGapReduction - layout.popupHeadingRemoval - layout.popupFeedbackHeight
     test.equal(first.content.height, bobHeight, "BoB omits both icon rows")
     test.equal(built[1].options.formHeight, bobHeight)
     test.equal(rectangles[1].height, bobHeight, "Tint follows window height")
     popup.select(3)
     test.equal(first.content.height, bobHeight + layout.iconHeight + layout.iconTextHeight,
         "Switching back restores both icon rows")
+    local normalHeight = first.content.height
+    built[1].options.onFeedbackHeight(true)
+    test.equal(first.content.height, normalHeight + layout.popupFeedbackHeight + layout.popupErrorExtraHeight,
+        "Error feedback expands the popup")
+    built[1].options.onFeedbackHeight(false)
+    test.equal(first.content.height, normalHeight, "Clearing the error shrinks the popup")
     first.root:SetPos(100, root.height - first.root.height)
     popup.select(19)
     popup.select(3)
@@ -193,11 +199,11 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     source = { parent = bank, visibleGlobal = true }
     popup.open(1, {}, { labels = bindings.labels, colours = {} }, library)
     test.equal(built[#built].options.formHeight,
-        layout.compactBodyHeight + layout.colourHeight - layout.popupEditorGapReduction - layout.popupHeadingRemoval)
+        layout.compactBodyHeight + layout.colourHeight - layout.popupEditorGapReduction - layout.popupHeadingRemoval - layout.popupFeedbackHeight)
     test.equal(windows[#windows].content.height, built[#built].options.formHeight)
     popup.open(1, {}, { labels = bindings.labels, colours = {}, icons = {} }, library)
     test.equal(built[#built].options.formHeight,
-        layout.compactBodyHeight + layout.colourHeight + layout.iconHeight - layout.popupEditorGapReduction - layout.popupHeadingRemoval)
+        layout.compactBodyHeight + layout.colourHeight + layout.iconHeight - layout.popupEditorGapReduction - layout.popupHeadingRemoval - layout.popupFeedbackHeight)
     test.equal(windows[#windows].content.height, built[#built].options.formHeight)
     popup.open(19, {}, bindings, library)
     test.equal(windows[#windows].content.height, bobHeight, "Opening BoB starts at the compact height")

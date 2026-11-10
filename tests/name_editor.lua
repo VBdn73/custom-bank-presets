@@ -1411,6 +1411,44 @@ test.case("Popup removes the preset heading and its space while retaining unsave
     test.equal(indicator.hidden, false)
 end)
 
+test.case("Compact popup uses button feedback and expands only for errors", function()
+    local f = createFixture({ get = function() return "" end, save = function() return true end })
+    local layout = require("editor/layout")
+    local normalHeight = layout.compactBodyHeight + layout.colourHeight
+        - layout.popupEditorGapReduction - layout.popupHeadingRemoval - layout.popupFeedbackHeight
+    local options = { hideTitle = true, readOnlyPreset = true, hidePresetHeading = true,
+        bankButtons = true, compactFeedback = true, formHeight = normalHeight }
+    local expanded = false
+    options.onFeedbackHeight = function(show)
+        expanded = show
+        options.formHeight = normalHeight + (show and layout.popupFeedbackHeight + layout.popupErrorExtraHeight or 0)
+        f.parent.height = options.formHeight
+    end
+    f.parent.height = normalHeight
+    f:open(18, options)
+    test.equal(normalHeight - (f.save.y + f.save.height), 8,
+        "Compact buttons retain breathing room below")
+    f.input.content = "Changed"
+    f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input)
+    test.equal(f.save.label, "Save *")
+    f:clickSave()
+    test.equal(f.save.label, "Saved")
+    test.equal(expanded, false)
+    for _ = 1, 120 do f.refresh() end
+    test.equal(f.save.label, "Save")
+    f:clickReset()
+    test.equal(f.reset.label, "Defaults staged")
+    test.equal(f.save.label, "Save *")
+    f.saveMode = "rejected"
+    f:clickSave()
+    test.equal(expanded, true)
+    test.equal(f.reset.label, "Reset")
+    f.input.content = "Another"
+    f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input)
+    test.equal(expanded, false)
+    test.equal(f.save.label, "Save *")
+end)
+
 test.case("Editor item previews use the available space without overlapping the control arrow", function()
     local f = iconFixture()
     f:stageIcon("item:31725")

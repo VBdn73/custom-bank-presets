@@ -89,12 +89,15 @@ function popup.open(slot, names, bindings, prettyui)
             binding.categoryID, binding.dynamicID)
         return current and not current.isRestricted and current.visibleGlobal
     end
+    local feedbackError = false
+    local currentSlot = slot
     local function bodyHeightFor(selected)
         local numbered = slots.valid(selected)
         return layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0)
             + (numbered and bindings.icons and layout.iconHeight or 0)
             + (numbered and bindings.iconText and layout.iconTextHeight or 0)
             - layout.popupEditorGapReduction - layout.popupHeadingRemoval
+            + (feedbackError and layout.popupErrorExtraHeight or -layout.popupFeedbackHeight)
     end
     local bodyHeight = bodyHeightFor(slot)
     -- PrettyUI chrome uses a 32px title and 8px bottom/side borders.
@@ -122,11 +125,16 @@ function popup.open(slot, names, bindings, prettyui)
             hideTitle = true, readOnlyPreset = true, hidePresetHeading = true,
             externalInfoButton = true, infoParent = window.root,
             contentHost = window, formHeight = bodyHeight, prettyui = prettyui,
-            bankButtons = true,
+            bankButtons = true, compactFeedback = true,
+            onFeedbackHeight = function(showError)
+                feedbackError = showError
+                if resizeForSlot then resizeForSlot(currentSlot) end
+            end,
         }
         refresh, toggleInfo, destroyEditor, selectSlot = nameEditor.build(window.content, names, bindings, slot, editorOptions)
         entryCount = bindings.entryCount or bindings.presetCount
         resizeForSlot = function(selected)
+            currentSlot = selected
             local newBodyHeight = bodyHeightFor(selected)
             editorOptions.formHeight = newBodyHeight
             window:SetSize(width, newBodyHeight + 32 + 8)
@@ -135,6 +143,7 @@ function popup.open(slot, names, bindings, prettyui)
             local y = math.max(0, math.min(window.root.y, parent.height - window.root.height))
             if x ~= window.root.x or y ~= window.root.y then window.root:SetPos(x, y) end
         end
+        if feedbackError then resizeForSlot(slot) end
         infoButton, updateInfo = icons.info(window.root, toggleInfo)
         closeButton, updateClose = icons.close(window.root, popup.close)
         infoButton:SetPos(-52, 7, 1, 0)
