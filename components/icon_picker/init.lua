@@ -30,7 +30,7 @@ function picker.open(host, options)
     if options.searchIndex then
         searchCategory = { key = "search", name = "Search", entries = {},
             emptyMessage = "Search item names." }
-        categories[#categories + 1] = searchCategory
+        table.insert(categories, 1, searchCategory)
     end
     local parent = host
     while parent.parent and not parent.parent.isRestricted do parent = parent.parent end

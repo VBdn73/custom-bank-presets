@@ -34,11 +34,11 @@ test.case("Bosses category is reserved for suitable icons", function()
     test.equal(catalogue.get("bosses:nex"), nil)
 end)
 
-test.case("Misc tab exposes coin variants, achievements, clues and utility artwork", function()
+test.case("Misc tab exposes coin variants, achievements and utility artwork", function()
     local category = catalogue.categories[2]
     test.equal(category.key, "misc")
     test.equal(category.name, "Misc")
-    test.equal(#category.entries, 37)
+    test.equal(#category.entries, 21)
     local seen = {}
     for _, entry in ipairs(category.entries) do
         test.equal(entry.category, "misc")
@@ -55,11 +55,14 @@ test.case("Misc tab exposes coin variants, achievements, clues and utility artwo
     for index, amount in ipairs({ 1, 2, 3, 4, 5, 25, 100, 250, 1000, 10000 }) do
         test.equal(catalogue.get("misc:coins-" .. amount).objectID, 994 + index)
     end
-    for index, tier in ipairs({ "easy", "medium", "hard", "elite", "master" }) do
-        test.equal(catalogue.get("misc:clue-scroll-" .. tier).objectID, 42005 + index)
-        test.equal(catalogue.get("misc:casket-" .. tier).objectID, 42000 + index)
+    for _, tier in ipairs({ "easy", "medium", "hard", "elite", "master" }) do
+        test.equal(catalogue.get("misc:clue-scroll-" .. tier), nil)
+        test.equal(catalogue.get("misc:casket-" .. tier), nil)
     end
-    test.equal(catalogue.get("misc:max-cape").objectID, 20767)
+    for _, key in ipairs({ "clue-scroll", "clue-bag", "max-cape", "completionist-cape",
+        "trimmed-completionist-cape", "tetracompass" }) do
+        test.equal(catalogue.get("misc:" .. key), nil)
+    end
     test.equal(catalogue.get("misc:quests").sprite, "RS3_ICON_QUEST_LIST")
     test.equal(catalogue.get("misc:runescore").sprite, "ACHIEVEMENT_ICON_RUNESCORE")
     test.equal(catalogue.get("misc:skills").sprite, "RS3_ICON_TAB_SKILLS")

@@ -24,16 +24,6 @@ end
 sprite("quests", "Quests", "RS3_ICON_QUEST_LIST")
 sprite("runescore", "RuneScore", "ACHIEVEMENT_ICON_RUNESCORE")
 sprite("skills", "Skills / levels", "RS3_ICON_TAB_SKILLS")
-sprite("clue-scroll", "Clue scroll", "CLUE_SCROLL_ICON")
-for index, tier in ipairs({ "easy", "medium", "hard", "elite", "master" }) do
-    item("clue-scroll-" .. tier, tier:gsub("^%l", string.upper) .. " clue scroll", 42005 + index)
-    item("casket-" .. tier, tier:gsub("^%l", string.upper) .. " reward casket", 42000 + index)
-end
-item("clue-bag", "Charos' clue carrier", 41904)
-item("max-cape", "Max cape", 20767)
-item("completionist-cape", "Completionist cape", 20769)
-item("trimmed-completionist-cape", "Trimmed completionist cape", 20771)
-sprite("tetracompass", "Tetracompass", "ARCH_ICON_RESTORATION_TETRACOMPASS")
 sprite("combat-level", "Combat level", "AIF_COMBAT_ICON")
 sprite("world-map", "World map", "NAVIGATION_ICON_WORLDMAP_ON")
 sprite("calendar", "Calendar", "BTN_MOBILE_CALENDAR")

@@ -94,6 +94,9 @@ test.case("Search tab displays selectable item tiles and paginates results", fun
     local f = fixture({ searchIndex = index, resolve = function(key) return tonumber(key:match("%d+")) end,
         apply = function(sprite, assetID) sprite.sprite = assetID end })
     f.open()
+    local searchTab = f.find("Button", function(c) return c.label == "Search" end)[1]
+    local skillsTab = f.find("Button", function(c) return c.label == "Skills" end)[1]
+    test.equal(searchTab.y == skillsTab.y and searchTab.x < skillsTab.x, true)
     local field = f.find("InputField")[1]
     test.equal(field.hidden, true)
     local normalHeight = f.root.height
@@ -116,6 +119,13 @@ test.case("Search tab displays selectable item tiles and paginates results", fun
     f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
     f.tiles()[1].hooks.press()
     test.equal(f.selected[1], "item:31")
+end)
+
+test.case("Search opens first when no icon is selected", function()
+    local f = fixture({ initial = "", searchIndex = { next = 1, maxId = 0, search = function() return {} end } })
+    f.open()
+    test.equal(f.find("InputField")[1].hidden, false)
+    f.close()
 end)
 
 test.case("Icon picker selects once, highlights selection and exposes hover/keyboard labels", function()
