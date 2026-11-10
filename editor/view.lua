@@ -689,6 +689,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
 
     local function actionButton(label, callback)
+        if options.bankButtons then
+            local button = createButton(parent, label, callback)
+            button:SetSize(layout.buttonWidth, 24)
+            return button
+        end
         if not contentHost then return createButton(parent, label, callback) end
         return contentHost:AddSimpleButton(label, callback, {
             absolute = true, x = 0, y = 0,

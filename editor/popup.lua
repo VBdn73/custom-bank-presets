@@ -3,7 +3,7 @@ local layout = require("editor/layout")
 local icons = require("editor/icon")
 local slots = require("presets/slots")
 local popup = {}
-local window, refresh, bankIsOpen, updateInfo, infoButton
+local window, refresh, bankIsOpen, updateInfo, infoButton, updateClose, closeButton
 local positionKey = "presetEditor.position.v1"
 local lastX, lastY
 local savedPosition
@@ -60,13 +60,8 @@ function popup.close()
         end
     end
     local previous = window
-    local previousInfo = infoButton
     window, refresh, bankIsOpen, updateInfo = nil, nil, nil, nil
-    infoButton = nil
-    if previousInfo then
-        if previous then previous:_UnregisterOverlay(previousInfo) end
-        pcall(function() previousInfo:Destroy() end)
-    end
+    infoButton, closeButton, updateClose = nil, nil, nil
     -- The bank may already have disposed the window's interface.
     if previous then pcall(function() previous:Destroy() end) end
 end
@@ -104,21 +99,29 @@ function popup.open(slot, names, bindings, prettyui)
             y = math.max(0, math.min(lastY or math.floor((parent.height - height) / 2), parent.height - height)),
             scrollable = false, onClose = popup.close,
         })
+        -- Keep PrettyUI's known-good tiled background and title font. The
+        -- bank's background component can expose an empty sprite, and font
+        -- IDs which are not present in the client do not render any text.
+        window.titleText.rgba = 0xD6A65CFF
         local toggleInfo
         refresh, toggleInfo, destroyEditor, selectSlot = nameEditor.build(window.content, names, bindings, slot, {
             hideTitle = true, readOnlyPreset = true, hidePresetHeading = true,
             externalInfoButton = true, infoParent = window.root,
             contentHost = window, formHeight = bodyHeight, prettyui = prettyui,
+            bankButtons = true,
         })
         entryCount = bindings.entryCount or bindings.presetCount
-        -- The drag handle is a sibling above the window, so the header icon
-        -- must also be an overlay rather than a child underneath that handle.
-        infoButton, updateInfo = icons.info(parent, toggleInfo)
+        infoButton, updateInfo = icons.info(window.root, toggleInfo)
+        closeButton, updateClose = icons.close(window.root, popup.close)
+        infoButton:SetPos(-52, 7, 1, 0)
+        infoButton:SetSize(20, 20)
+        -- Cover the close frame built into PrettyUI's corner without replacing
+        -- the corner itself, which also supplies the outer window border.
+        closeButton:SetPos(-28, 7, 1, 0)
+        closeButton:SetSize(20, 20)
+        window.closeButton.hidden = true
         window.titleText:SetSize(-80, 28, 1, 0)
-        window:_RegisterOverlay(infoButton, nil, function()
-            infoButton:SetPos(window.root.x + window.root.width - 28 - 4 - layout.popupCloseSize,
-                window.root.y + 6)
-        end)
+        window.titleDrag:SetSize(window.root.width - 70, 32)
         window:_SyncOverlays(false)
     end)
     if not ok then
@@ -132,8 +135,12 @@ function popup.update()
     rememberPosition()
     local ok = pcall(function()
         if not bankIsOpen() then popup.close(); return end
+        -- PrettyUI restores its default drag width after release. Leave its
+        -- full-screen capture alone while dragging, then reserve the buttons.
+        if not window.dragFeedback then window.titleDrag:SetSize(window.root.width - 70, 32) end
         window:_SyncOverlays(window.root.hidden == true)
         updateInfo()
+        updateClose()
         refresh()
     end)
     if not ok then popup.close() end

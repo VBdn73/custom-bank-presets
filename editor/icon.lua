@@ -19,4 +19,9 @@ function icon.info(parent, action)
         id.Sprite.RS3_BUTTON_INFO_PARENT_1, id.Sprite.RS3_BUTTON_INFO_PARENT_2, action)
 end
 
+function icon.close(parent, action)
+    return icon.new(parent, id.Sprite.RS3_BUTTON_CLOSE_PARENT_0,
+        id.Sprite.RS3_BUTTON_CLOSE_PARENT_1, id.Sprite.RS3_BUTTON_CLOSE_PARENT_2, action)
+end
+
 return icon

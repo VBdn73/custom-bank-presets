@@ -15,7 +15,7 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     local source = { parent = bank, visibleGlobal = true }
     local function control(parent)
         local c = { parent = parent }
-        function c:SetPos(x, y) self.x, self.y = x, y end
+        function c:SetPos(x, y, xa, ya) self.x, self.y, self.xAnchor, self.yAnchor = x, y, xa, ya end
         function c:SetSize(w, h) self.width, self.height = w, h end
         function c:Subscribe(_, callback) self.callback = callback end
         function c:Destroy() self.destroyed = true end
@@ -27,10 +27,15 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
             sprites[#sprites + 1] = c
             return c
         end }, Hook = { ONCLICK = 1 } }
-    id = { Sprite = { RS3_BUTTON_INFO_PARENT_0 = 1,
-        RS3_BUTTON_INFO_PARENT_1 = 2, RS3_BUTTON_INFO_PARENT_2 = 3 } }
+    id = { Font = { CINZEL_13PT_REGULAR = 10, CINZEL_13PT_BOLD = 11 }, Sprite = { RS3_BUTTON_INFO_PARENT_0 = 1,
+        RS3_BUTTON_INFO_PARENT_1 = 2, RS3_BUTTON_INFO_PARENT_2 = 3,
+        RS3_BUTTON_CLOSE_PARENT_0 = 4, RS3_BUTTON_CLOSE_PARENT_1 = 5,
+        RS3_BUTTON_CLOSE_PARENT_2 = 6, RS3_MODAL_WINDOW_1_TOP_TILE = 7,
+        RS3_PARENT_FRAME_TOP_CORNER = 8 } }
     local library = { Window = { new = function(parent, options)
-        local w = { root = control(parent), options = options, titleText = control(parent), overlays = {} }
+        local w = { root = control(parent), options = options, titleText = control(parent), overlays = {},
+            background = control(parent), closeButton = control(parent),
+            titleRight = control(parent), titleDrag = control(parent) }
         function w:_RegisterOverlay(c, _, position) self.overlays[c] = position end
         function w:_UnregisterOverlay(c) self.overlays[c] = nil end
         function w:_SyncOverlays(hidden)
@@ -67,18 +72,41 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(built[1].options.readOnlyPreset, true)
     test.equal(built[1].options.hidePresetHeading, true)
     test.equal(built[1].options.externalInfoButton, true)
+    test.equal(built[1].options.bankButtons, true)
+    test.equal(first.background.sprite, nil, "Keep the window's existing background")
+    test.equal(first.titleText.font, nil, "Keep the window's existing title font")
+    test.equal(first.titleText.rgba, 0xD6A65CFF)
+    test.equal(first.closeButton.hidden, true, "Use the native close sprite instead of PrettyUI's modal icon")
     test.equal(built[1].options.infoParent, first.root)
-    local info = sprites[1]
-    test.equal(info.parent, root, "Header info is above the sibling drag handle")
-    test.equal(info.y, first.root.y + 6)
-    test.equal(info.x, first.root.x + first.root.width - 54, "Help sits beside close")
+    local info, close = sprites[1], sprites[2]
+    test.equal(first.titleRight.spriteID, nil, "Keep the original complete title corner")
+    test.equal(info.parent, first.root, "Header buttons move with the window")
+    test.equal(close.parent, first.root)
+    test.equal(first.titleDrag.width, first.root.width - 70)
+    test.equal(info.width, 20)
+    test.equal(info.sprite, 1)
+    test.equal(close.width, 20)
+    test.equal(close.sprite, 4)
+    test.equal(close.x, -28)
+    test.equal(close.y, 7)
+    test.equal(info.y, 7)
+    test.equal(info.x, -52, "Help sits beside close")
+    test.equal(info.xAnchor, 1)
     first.root:SetPos(100, 120)
     popup.update()
-    test.equal(info.x, 100 + first.root.width - 54, "Help follows dragging")
-    test.equal(info.y, 126)
+    test.equal(info.x, -52, "Buttons retain their window-relative position")
+    test.equal(info.y, 7)
+    test.equal(close.x, -28)
+    first.dragFeedback = {}
+    first.titleDrag:SetSize(900, 890)
+    popup.update()
+    test.equal(first.titleDrag.width, 900, "Do not disturb active drag capture")
+    first.dragFeedback = nil
+    popup.update()
+    test.equal(first.titleDrag.width, first.root.width - 70)
     first.root.hidden = true
     popup.update()
-    test.equal(info.hidden, true)
+    test.equal(first.root.hidden, true, "Child buttons inherit window visibility")
     first.root.hidden = false
     info.callback()
     test.equal(infoClicks, 1)
@@ -97,14 +125,16 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     info.isMouseOver = true
     popup.update()
     test.equal(info.sprite, 2)
+    close.isMouseOver = true
+    popup.update()
+    test.equal(close.sprite, 5)
     popup.open(2, {}, bindings, library)
     test.equal(first.destroyed, true)
-    test.equal(info.destroyed, true, "Sibling overlay is explicitly destroyed")
     test.equal(next(first.overlays), nil)
     test.equal(built[2].slot, 2)
     test.equal(windows[2].root.x, 100, "Reopening retains dragged x")
     test.equal(windows[2].root.y, 120, "Reopening retains dragged y")
-    windows[2].options.onClose()
+    sprites[4].callback()
     test.equal(windows[2].destroyed, true)
     test.equal(stored["presetEditor.position.v1"], "100,120")
     popup.close()
