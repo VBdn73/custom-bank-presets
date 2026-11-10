@@ -451,19 +451,25 @@ function editor.build(parent, names, bindings, initialSlot, options)
             trackPosition(resetColour, layout.swatchX + 66, y - 1)
             updateColourResetIcons[#updateColourResetIcons + 1] = updateReset
             defaultMarks[kind] = {}
-            -- Draw thin diagonals with native rectangles, without relying on
-            -- rotation support. Keep a small inset inside the swatch border.
+            -- Blend neighbouring pixels according to the fractional line position.
+            -- Native rectangles do not need rotation and remain click-through.
             for column = 0, 49 do
-                local offset = math.floor(column * 15 / 49 + 0.5)
-                for _, row in ipairs({ offset, 15 - offset }) do
-                    local mark = ui.Rectangle.new(parent)
-                    mark:SetSize(1, 1)
-                    mark.fill = true
-                    mark.colour = theme.colour({ 1, 1, 1, 1 })
-                    mark.clickthrough = true
-                    trackPosition(mark, layout.swatchX + 4 + column, y + 2 + row)
-                    defaultMarks[kind][#defaultMarks[kind] + 1] = mark
-                    defaultMarkKinds[mark] = kind
+                local offset = column * 15 / 49
+                for _, position in ipairs({ offset, 15 - offset }) do
+                    local row = math.floor(position)
+                    local fraction = position - row
+                    for _, pixel in ipairs({ { row, 1 - fraction }, { row + 1, fraction } }) do
+                        if pixel[2] > 0 then
+                            local mark = ui.Rectangle.new(parent)
+                            mark:SetSize(1, 1)
+                            mark.fill = true
+                            mark.colour = theme.colour({ 1, 1, 1, pixel[2] })
+                            mark.clickthrough = true
+                            trackPosition(mark, layout.swatchX + 4 + column, y + 2 + pixel[1])
+                            defaultMarks[kind][#defaultMarks[kind] + 1] = mark
+                            defaultMarkKinds[mark] = kind
+                        end
+                    end
                 end
             end
             control:Subscribe(ui.Hook.ONCLICK, function()

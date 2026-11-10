@@ -765,7 +765,7 @@ test.case("Open colour pickers close on slot changes, character changes, hide an
     test.equal(root.destroyed, true)
 end)
 
-test.case("Default colour swatches show clickthrough white diagonal crosses", function()
+test.case("Default colour swatches show antialiased clickthrough diagonal crosses", function()
     local f = createFixture({ get = function(_, kind)
         return kind == "text" and "#123456" or ""
     end })
@@ -779,15 +779,16 @@ test.case("Default colour swatches show clickthrough white diagonal crosses", fu
             test.equal(control.colour[3], 1)
         end
     end
-    test.equal(#marks, 200)
-    for column = 1, 49 do
-        local previous, current = marks[column * 2 - 1], marks[column * 2 + 1]
-        test.equal(current.x - previous.x, 1, "Diagonal segments have no horizontal gaps")
-        test.equal(math.abs(current.y - previous.y) <= 1, true, "Diagonal remains connected")
+    test.equal(#marks, 392)
+    local translucent = false
+    for _, mark in ipairs(marks) do
+        test.equal(mark.colour[4] > 0 and mark.colour[4] <= 1, true)
+        if mark.colour[4] < 1 then translucent = true end
     end
+    test.equal(translucent, true, "Diagonal edges use partial opacity")
     f.refresh()
     for index, mark in ipairs(marks) do
-        test.equal(mark.hidden, index > 100, "Only default colours show the cross")
+        test.equal(mark.hidden, index > 196, "Only default colours show the cross")
     end
 end)
 
