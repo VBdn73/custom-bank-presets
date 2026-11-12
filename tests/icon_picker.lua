@@ -8,7 +8,7 @@ local function fixture(options)
         function control:SetPos(x, y) self.x, self.y = x, y end
         function control:SetSize(w, h) self.width, self.height = w, h end
         function control:Setup() end
-        function control:Subscribe(hook, action) self.hooks[hook] = action end
+        function control:Subscribe(hook, name, action) self.hooks[hook] = action or name end
         function control:Destroy()
             self.destroyed = true
             for _, child in ipairs(self.children) do child:Destroy() end
@@ -20,7 +20,7 @@ local function fixture(options)
         return control
     end
     local hooks = { ONCLICK = "click", ONBUTTONPRESSED = "press", ONMOUSEOVER = "over",
-        ONMOUSELEAVE = "leave", ONKEY = "key", ONCONTENTCHANGED = "change" }
+        ONMOUSELEAVE = "leave", ONKEY = "key", ONCONTENTCHANGED = "change", ONSCROLLWHEEL = "wheel" }
     local environment = setmetatable({
         print = function(message) f.messages[#f.messages + 1] = message end,
         ui = { Hook = hooks, AlignMode = { CENTRE = "centre" },
@@ -44,14 +44,24 @@ local function fixture(options)
     f.anchor:SetPos(10, 20)
     f.anchor:SetSize(40, 30)
     f.options = {
-        prettyui = { SpriteButton = { new = function(parent, spriteName, action, options)
-            local control = new("Arrow", parent)
-            control.spriteName = spriteName
-            control:SetPos(options.x, options.y)
-            control:SetSize(options.size, options.size)
-            function control:SetDisabled(disabled) self.disabled = disabled end
-            control.hooks.press = function() if not control.disabled then action() end end
-            return control
+        prettyui = { SimpleView = { new = function(parent, options)
+            local root = new("Scroll", parent)
+            root:SetPos(options.x, options.y)
+            root:SetSize(options.width, options.height)
+            local view = { root = root, content = new("Content", root), scrollY = 0, contentWidth = options.width }
+            view.upArrow, view.downArrow, view.thumbDrag = new("Arrow", root), new("Arrow", root), new("Thumb", root)
+            function view:SetContentHeight(height)
+                self.contentHeight = height
+                self.scrollbarVisible = height > options.height
+                self.contentWidth = options.width - (self.scrollbarVisible and 18 or 0)
+            end
+            function view:SetScrollPosition(y)
+                self.scrollY = math.max(0, math.min(y, math.max(0, self.contentHeight - options.height)))
+            end
+            function view:ScrollBy(y) self:SetScrollPosition(self.scrollY + y) end
+            function view:Destroy() root:Destroy() end
+            f.scroll = view
+            return view
         end } },
         categories = { { key = "skills", name = "Skills", entries = {
             { key = "skills:farming", name = "Farming", sprite = "FARM", width = 35, height = 35 },
@@ -86,7 +96,7 @@ local function fixture(options)
     return f
 end
 
-test.case("Search tab displays selectable item tiles and paginates results", function()
+test.case("Search tab displays selectable item tiles and scrolls results", function()
     local entries = {}
     for i = 1, 35 do entries[i] = { id = i, name = "Widget " .. i } end
     local index = { next = 70001, maxId = 70000,
@@ -100,31 +110,57 @@ test.case("Search tab displays selectable item tiles and paginates results", fun
     local field = f.find("InputField")[1]
     test.equal(field.hidden, true)
     local normalHeight = f.root.height
-    local normalGridY = f.tiles()[1].parent.y
+    local normalGridY = f.scroll.root.y
     f.find("Button", function(c) return c.label == "Search" end)[1].hooks.press()
     test.equal(field.hidden, false)
     test.equal(f.root.height, normalHeight + 32)
     field.content = "widget"
     field.hooks.change(field, 1)
-    test.equal(#f.tiles(), 30)
-    test.equal(f.tiles()[1].parent.y, normalGridY + 32)
+    test.equal(#f.tiles(), 35)
+    test.equal(f.scroll.root.y, normalGridY + 32)
     f.tiles()[1].hooks.over()
     test.equal(#f.find("Text", function(c) return c.content == "Widget 1" end), 1)
-    f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
-    test.equal(#f.tiles(), 5)
+    f.scroll:SetScrollPosition(10000)
+    f.update()
+    test.equal(#f.tiles(), 29)
     f.find("Button", function(c) return c.label == "Skills" end)[1].hooks.press()
     test.equal(f.root.height, normalHeight)
-    test.equal(f.tiles()[1].parent.y, normalGridY)
+    test.equal(f.scroll.root.y, normalGridY)
     f.find("Button", function(c) return c.label == "Search" end)[1].hooks.press()
-    f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
+    f.scroll:SetScrollPosition(10000)
+    f.update()
     f.tiles()[1].hooks.press()
-    test.equal(f.selected[1], "item:31")
+    test.equal(f.selected[1], "item:7")
 end)
 
 test.case("Search opens first when no icon is selected", function()
     local f = fixture({ initial = "", searchIndex = { next = 1, maxId = 0, search = function() return {} end } })
     f.open()
     test.equal(f.find("InputField")[1].hidden, false)
+    test.equal(#f.find("Text", function(c) return c.content == "Search item names." end), 0)
+    local field = f.find("InputField")[1]
+    field.content = "test"
+    field.hooks.change(field, 1)
+    test.equal(#f.find("Text", function(c) return c.content == "No items found." end), 1)
+    field.content = ""
+    field.hooks.change(field, 1)
+    test.equal(#f.find("Text", function(c) return c.content == "Search item names." end), 0)
+    f.close()
+end)
+
+test.case("Short lists retain a disabled scrollbar and its reserved width", function()
+    local f = fixture()
+    f.open()
+    test.equal(f.scroll.scrollbarVisible, true)
+    test.equal(f.scroll.contentWidth, f.scroll.root.width - 18)
+    test.equal(f.scroll.upArrow.enabled, false)
+    test.equal(f.scroll.downArrow.enabled, false)
+    test.equal(f.scroll.thumbDrag.enabled, false)
+    f.tiles()[1].hooks.wheel(nil, 1)
+    test.equal(f.scroll.scrollY, 0)
+    f.scroll:SetScrollPosition(1)
+    f.update()
+    test.equal(f.scroll.scrollY, 0)
     f.close()
 end)
 
@@ -232,7 +268,7 @@ test.case("Picker overlay follows its anchor, flips, clamps and tolerates detach
     test.equal(f.root.y, 120)
     f.anchor:SetPos(850, 650)
     f.update()
-    test.equal(f.root.x, 654)
+    test.equal(f.root.x, 642)
     test.equal(f.root.y + f.root.height <= f.parent.height, true)
     f.anchor:SetPos(-1000, -1000)
     f.reposition()
@@ -278,7 +314,7 @@ test.case("Category tabs wrap into readable rows without overlapping the grid", 
     test.equal(alpha.width >= 78, true)
     test.equal(beta.width >= 78, true)
     test.equal(extra.y > alpha.y, true)
-    test.equal(f.tiles()[1].parent.y >= extra.y + extra.height, true)
+    test.equal(f.scroll.root.y >= extra.y + extra.height, true)
     beta.hooks.press()
     test.equal(#f.tiles(), 1)
     f.tiles()[1].hooks.press()
@@ -310,40 +346,34 @@ test.case("Picker allows resetting when all categories are empty", function()
     test.equal(f.selected[1], "")
 end)
 
-test.case("Larger categories paginate and start on the selected entry's page", function()
-    local f = fixture({ initial = "test:32" })
+test.case("Large categories virtualize rows and reveal the selected icon", function()
+    local f = fixture({ initial = "test:99" })
     local entries = {}
-    for index = 1, 35 do entries[index] = { key = "test:" .. index, name = "Test " .. index, sprite = "FARM" } end
+    for index = 1, 100 do entries[index] = { key = "test:" .. index, name = "Test " .. index, sprite = "FARM" } end
     f.options.categories = { { key = "test", name = "Test", entries = entries } }
     f.open()
-    test.equal(#f.tiles(), 5)
-    test.equal(#f.find("Text", function(c) return c.content == "2 / 2" end), 1)
-    local pageLabel = f.find("Text", function(c) return c.content == "2 / 2" end)[1]
-    test.equal(pageLabel.alignHorizontal, "centre")
-    test.equal(pageLabel.x + pageLabel.width / 2, f.root.width / 2)
-    test.equal(f.find("Arrow")[2].disabled, true)
-    f.find("Arrow", function(c) return c.spriteName == "ARROW_LEFT" end)[1].hooks.press()
-    test.equal(#f.tiles(), 30)
-    test.equal(f.find("Arrow")[1].disabled, true)
-    f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
-    f.tiles()[2].hooks.press()
-    test.equal(f.selected[1], "test:32")
+    test.equal(f.scroll.scrollY > 0, true)
+    test.equal(#f.tiles() <= 36, true)
+    f.scroll:SetScrollPosition(0)
+    f.update()
+    test.equal(#f.tiles(), 36)
+    f.tiles()[1].hooks.wheel(nil, 44 / 44)
+    test.equal(f.scroll.scrollY, 44)
+    f.scroll:SetScrollPosition(10000)
+    f.update()
+    f.tiles()[4].hooks.press()
+    test.equal(f.selected[1], "test:76")
 end)
 
-test.case("The complete Skills category fits the standard grid and narrower UIs paginate", function()
+test.case("Narrow picker scrolls without exceeding its parent", function()
     local categories = { require("presets/icon_catalogue").categories[1] }
     local f = fixture({ categories = categories, initial = "skills:necromancy", resolve = function() return 99 end })
+    f.parent:SetSize(220, 400)
     f.open()
-    test.equal(#f.tiles(), 29)
-    test.equal(#f.find("Arrow"), 0)
+    test.equal(f.root.width <= 220, true)
+    test.equal(f.root.height <= 400, true)
+    test.equal(f.scroll.contentHeight > f.scroll.root.height, true)
     f.close()
-    local narrow = fixture({ categories = categories, initial = "skills:necromancy", resolve = function() return 99 end })
-    narrow.parent:SetSize(220, 400)
-    narrow.open()
-    test.equal(narrow.root.width <= 220, true)
-    test.equal(narrow.root.height <= 400, true)
-    test.equal(#narrow.find("Text", function(c) return c.content == "2 / 2" end), 1)
-    narrow.close()
 end)
 
 test.case("Picker supports injected catalogue resolution and cleans up failed construction", function()
