@@ -2,6 +2,9 @@
 local picker = {}
 local constants = require("constants")
 local overlayPosition = require("components/overlay_position")
+local controlFactory = require("components/icon_picker/controls")
+local sprites = require("components/icon_picker/sprites")
+local tooltips = require("components/icon_picker/tooltip")
 local defaultTheme = {
     border = { 0.58, 0.48, 0.28, 1 },
     background = { 0.14, 0.13, 0.11, 1 },
@@ -41,35 +44,9 @@ function picker.open(host, options)
     end
     local function build()
         local theme = options.theme or defaultTheme
-        local function rectangle(parent, x, y, w, h, filled, tint)
-            local control = ui.Rectangle.new(parent)
-            control:SetPos(x, y)
-            control:SetSize(w, h)
-            control.fill = filled
-            control.colour = Vector4.new(tint[1], tint[2], tint[3], tint[4])
-            control.clickthrough = not filled
-            return control
-        end
-        local function text(parent, x, y, w, content)
-            local control = ui.Text.new(parent)
-            control:SetPos(x, y)
-            control:SetSize(w, 24)
-            control.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
-            control.content = content
-            control.clickthrough = true
-            return control
-        end
-        local function button(parent, x, y, w, h, label, action)
-            local control = ui.Button.new(parent)
-            control:SetPos(x, y)
-            control:SetSize(w, h)
-            control.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
-            control.label = label
-            control:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
-                if not closed then action() end
-            end)
-            return control
-        end
+        local controls = controlFactory.new(ui, id, Vector4, function() return closed end)
+        local rectangle, text, button = controls.rectangle, controls.text, controls.button
+        local renderSprite = sprites.new(ui, id, options, print)
         local function select(key)
             if closed then return end
             close()
@@ -117,7 +94,7 @@ function picker.open(host, options)
         end)
         closeButton:Subscribe(ui.Hook.ONCLICK, function() close(); return true end)
         local selectedName = text(root, 12, footerY + 4, innerWidth, initialName)
-        local grid, scroll, tooltip, tooltipBackground, tooltipInner, tooltipLabel, tabFrames, refresh
+        local grid, scroll, tooltip, tabFrames, refresh
         tabFrames = {}
         local renderedRow, scrollNeeded
         local searchField
@@ -153,7 +130,6 @@ function picker.open(host, options)
                     and (done or options.searchIndex.next % constants.itemSearchRefreshInterval == 0) then updateSearch(false) end
             end
         end
-        local reportedErrors = {}
         local resetWidth = math.floor((innerWidth - 4) / 2)
         local resetButton = button(root, 12, height - 40, resetWidth, 28, "Use preset number", function() select("") end)
         local blankButton = button(root, 16 + resetWidth, height - 40, innerWidth - resetWidth - 4, 28,
@@ -254,84 +230,19 @@ function picker.open(host, options)
                         end
                         return true
                     end)
-                    local sprite
-                    local ok, err = pcall(function()
-                        local spriteID
-                        if options.resolve then spriteID = options.resolve(entry.key)
-                        else spriteID = id.Sprite[entry.sprite] end
-                        assert(type(spriteID) == "number" and spriteID >= 0 and spriteID % 1 == 0)
-                        local w, h = entry.width or 24, entry.height or 24
-                        assert(w > 0 and h > 0)
-                        sprite = ui.Sprite.new(grid)
-                        if options.apply then options.apply(sprite, spriteID, entry)
-                        else
-                            sprite.sprite = spriteID
-                            assert(sprite.spriteID == spriteID)
-                        end
-                        local iconSize = entry.objectID and 36 or 24
-                        local scale = math.min(iconSize / w, iconSize / h, 1)
-                        w, h = math.max(1, math.floor(w * scale)), math.max(1, math.floor(h * scale))
-                        sprite:SetSize(w, h)
-                        sprite:SetPos(x + math.floor((40 - w) / 2), y + math.floor((40 - h) / 2))
-                        sprite.rgba = 0xFFFFFFFF
-                        sprite.clickthrough, sprite.enabled = true, false
-                    end)
-                    available = ok
-                    if not ok then
-                        if sprite then pcall(function() sprite:Destroy() end) end
-                        target.label = "?"
-                        local message = tostring(err)
-                        if not reportedErrors[message] then
-                            reportedErrors[message] = true
-                            print("[Icon picker] Could not render " .. entry.key .. ": " .. message)
-                        end
-                    end
+                    available = renderSprite(grid, entry, x, y)
+                    if not available then target.label = "?" end
                     local function showName()
                         if closed then return end
                         local label = entry.name .. (available and "" or " (unavailable)")
-                        local font
-                        if config and config.Font and config.Font.FromID then
-                            local ok, result = pcall(config.Font.FromID, tooltipLabel.font)
-                            if ok then font = result end
-                        end
-                        local function measure(value)
-                            if font then
-                                local ok, result = pcall(function() return font:GetStringWidth(value, true) end)
-                                if ok and type(result) == "number" then return result end
-                            end
-                            return #value * 8
-                        end
-                        local tooltipWidth = math.min(width - 8, math.max(60, measure(label) + 16))
-                        local textWidth = math.max(1, tooltipWidth - 12)
-                        local lines, line = 1, ""
-                        for word in label:gmatch("%S+") do
-                            local nextLine = line == "" and word or line .. " " .. word
-                            if line ~= "" and measure(nextLine) > textWidth then
-                                lines, line = lines + 1, word
-                            else
-                                line = nextLine
-                            end
-                        end
-                        local tooltipHeight = math.max(26, lines * 18 + 8)
-                        local tooltipX = math.max(4, math.min(12 + x, width - tooltipWidth - 4))
-                        local tooltipY = gridY + y - (scroll.scrollY or 0) - tooltipHeight - 2
-                        if tooltipY < gridY then tooltipY = gridY + y - (scroll.scrollY or 0) + 40 end
-                        tooltipY = math.max(0, math.min(tooltipY, height - tooltipHeight))
-                        tooltip:SetPos(tooltipX, tooltipY)
-                        tooltip:SetSize(tooltipWidth, tooltipHeight)
-                        tooltipBackground:SetSize(tooltipWidth, tooltipHeight)
-                        tooltipInner:SetSize(tooltipWidth - 2, tooltipHeight - 2)
-                        tooltipLabel:SetSize(textWidth, tooltipHeight - 2)
-                        tooltipLabel.maxLines = lines
-                        tooltipLabel.content = label
-                        tooltip.hidden = false
+                        tooltip:show(label, x, y, gridY, scroll.scrollY or 0)
                     end
                     target:Subscribe(ui.Hook.ONMOUSEOVER, showName)
                     -- Native buttons handle activation; ONKEY also exposes the
                     -- label when keyboard interaction is delivered to a tile.
                     target:Subscribe(ui.Hook.ONKEY, showName)
                     target:Subscribe(ui.Hook.ONMOUSELEAVE, function()
-                        if not closed then tooltip.hidden = true end
+                        if not closed then tooltip:hide() end
                     end)
                     if entry.key == options.initial then
                         rectangle(grid, x, y, 40, 40, false, theme.border)
@@ -339,14 +250,7 @@ function picker.open(host, options)
                 end
             end
             -- Created after the grid so it draws above every icon tile.
-            tooltip = ui.Layer.new(root)
-            tooltip.clickthrough = true
-            tooltipBackground = rectangle(tooltip, 0, 0, 60, 26, true, theme.border)
-            tooltipInner = rectangle(tooltip, 1, 1, 58, 24, true, theme.background)
-            tooltipBackground.clickthrough, tooltipInner.clickthrough = true, true
-            tooltipLabel = text(tooltip, 6, 1, 48, "")
-            tooltipLabel.alignVertical = ui.AlignMode.CENTRE
-            tooltip.hidden = true
+            tooltip = tooltips.new(root, ui, controls, theme, config)
         end
         updateScroll = function()
             if scroll and not scrollNeeded and (scroll.scrollY or 0) ~= 0 then scroll:SetScrollPosition(0) end
