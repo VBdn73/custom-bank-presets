@@ -4,8 +4,9 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
     local oldNames, oldColours = package.loaded["presets/names"], package.loaded["presets/colours"]
     local oldSwap = package.loaded["presets/swap"]
     local oldIcons = package.loaded["presets/icons"]
-    local data = { [1] = { name = "First", background = "#008000", text = "", icon = "skills:farming" },
-        [5] = { name = "Fifth", background = "", text = "#38A4FF", icon = "" } }
+    local oldIconText = package.loaded["presets/icon_text"]
+    local data = { [1] = { name = "First", background = "#008000", text = "", icon = "skills:farming", iconText = "A1" },
+        [5] = { name = "Fifth", background = "", text = "#38A4FF", icon = "", iconText = "" } }
     local context = "character"
     local names = { getContext = function() return context end,
         normalize = dofile("presets/names.lua").normalize,
@@ -20,6 +21,11 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
         normalize = dofile("presets/icons.lua").normalize,
         get = function(slot) return data[slot].icon end,
         save = function(slot, value) data[slot].icon = value return true end,
+    }
+    package.loaded["presets/icon_text"] = {
+        normalize = dofile("presets/icon_text.lua").normalize,
+        get = function(slot) return data[slot].iconText end,
+        save = function(slot, value) data[slot].iconText = value return true end,
     }
     package.loaded["presets/swap"] = dofile("presets/swap.lua")
     local rows = {}
@@ -54,6 +60,8 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
     test.equal(data[1].background, "")
     test.equal(data[5].icon, "skills:farming")
     test.equal(data[1].icon, "")
+    test.equal(data[5].iconText, "A1")
+    test.equal(data[1].iconText, "")
     rows[1].callback(rows[1], nil)
     rows[1].callback(rows[1], rows[1])
     test.equal(data[1].name, "Fifth")
@@ -65,4 +73,5 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
     package.loaded["presets/names"], package.loaded["presets/colours"] = oldNames, oldColours
     package.loaded["presets/swap"] = oldSwap
     package.loaded["presets/icons"] = oldIcons
+    package.loaded["presets/icon_text"] = oldIconText
 end)

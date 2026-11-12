@@ -92,12 +92,7 @@ function popup.open(slot, names, bindings, prettyui)
     local feedbackError = false
     local currentSlot = slot
     local function bodyHeightFor(selected)
-        local numbered = slots.valid(selected)
-        return layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0)
-            + (numbered and bindings.icons and layout.iconHeight or 0)
-            + (numbered and bindings.iconText and layout.iconTextHeight or 0)
-            - layout.popupEditorGapReduction - layout.popupHeadingRemoval
-            + (feedbackError and layout.popupErrorExtraHeight or -layout.popupFeedbackHeight)
+        return layout.popupBodyHeight(bindings, selected, feedbackError)
     end
     local bodyHeight = bodyHeightFor(slot)
     -- PrettyUI chrome uses a 32px title and 8px bottom/side borders.

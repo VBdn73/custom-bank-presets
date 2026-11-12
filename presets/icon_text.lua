@@ -1,6 +1,7 @@
 local names = require("presets/names")
 local slots = require("presets/slots")
 local storage = require("storage")
+local constants = require("constants")
 local iconText = {}
 local cache, context = {}, nil
 
@@ -12,10 +13,11 @@ local function key(slot)
 end
 
 function iconText.normalize(value)
-    if type(value) == "string" and #value <= 3 and (value == "" or value:match("^[A-Za-z0-9]+$")) then
+    if type(value) == "string" and #value <= constants.maximumIconTextLength
+        and (value == "" or value:match("^[A-Za-z0-9]+$")) then
         return value
     end
-    return nil, "Icon text must contain at most 3 letters or numbers."
+    return nil, ("Icon text must contain at most %d letters or numbers."):format(constants.maximumIconTextLength)
 end
 
 function iconText.get(slot)

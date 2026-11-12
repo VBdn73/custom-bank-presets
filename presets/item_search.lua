@@ -1,8 +1,16 @@
 -- Resolve names once per plugin session, in small batches on the logic tick.
-local index = { entries = {}, next = 0, maxId = 70000 }
+local constants = require("constants")
+local index = { entries = {}, next = 0, maxId = constants.maximumItemSearchID }
 local seenNames = {}
 local excludedNameParts = { "(broken)", "(damaged)", "(uncharged)" }
 local excludedNamePrefixes = { "augmented", "broken" }
+
+-- Release session-only data without replacing the module held by open callers.
+function index.clear()
+    index.entries = {}
+    index.next = 0
+    seenNames = {}
+end
 
 local function isExcluded(lowerName)
     for _, part in ipairs(excludedNameParts) do

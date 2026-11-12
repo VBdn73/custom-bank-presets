@@ -4,6 +4,7 @@ test.case("Entry point retains PrettyUI for later content events and disposes ol
     local library = {}
     local built, destroyed = 0, 0
     local modules = {
+        ["editor/views"] = require("editor/views"),
         ["bank/bindings"] = { labels = {} },
         ["bank/menu"] = { selectedSlot = function(entry)
             test.equal(entry.verbText, "Select")
@@ -54,6 +55,16 @@ test.case("Main renders saved icons at Draw and restores them on shutdown", func
     local store = {}
     local showBackgrounds = true
     local modules = { ["bank/bindings"] = bindings, ["presets/icons"] = store }
+    modules["editor/views"] = require("editor/views")
+    modules["editor/popup"] = {
+        close = function() calls[#calls + 1] = "popup.close" end,
+    }
+    modules["presets/item_search"] = {
+        clear = function()
+            test.equal(calls[#calls], "popup.close", "Close the picker before clearing its index")
+            calls[#calls + 1] = "search.clear"
+        end,
+    }
     modules["presets/settings"] = {
         hidePredefinedDropdown = function() return false end,
         showCompactBackgrounds = function() return showBackgrounds end,
@@ -101,4 +112,9 @@ test.case("Main renders saved icons at Draw and restores them on shutdown", func
     environment.PluginShutdown()
     test.equal(calls[drawCalls + 1], "compact.restore")
     test.equal(calls[drawCalls + 2], "icons.restore", "Restore icons before native layout cleanup")
+    local cleared = 0
+    for _, call in ipairs(calls) do
+        if call == "search.clear" then cleared = cleared + 1 end
+    end
+    test.equal(cleared, 1, "Shutdown clears the item-search cache")
 end)

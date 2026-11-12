@@ -1,4 +1,5 @@
 -- Keep the embedded editor and its popup host sized together.
+local slots = require("presets/slots")
 local layout = {
     width = 336,
     height = 262,
@@ -65,5 +66,22 @@ layout.compactPopupHeight = layout.popupHeaderHeight + layout.compactBodyHeight 
 layout.colourHeight = 64
 layout.iconHeight = 32
 layout.iconTextHeight = 32
+
+function layout.customisationHeight(bindings, slot)
+    if not slots.valid(slot) then return 0 end
+    return (bindings.icons and layout.iconHeight or 0)
+        + (bindings.iconText and layout.iconTextHeight or 0)
+end
+
+function layout.feedbackHeight(showError)
+    return showError and layout.popupErrorExtraHeight or -layout.popupFeedbackHeight
+end
+
+function layout.popupBodyHeight(bindings, slot, showError)
+    return layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0)
+        + layout.customisationHeight(bindings, slot)
+        - layout.popupEditorGapReduction - layout.popupHeadingRemoval
+        + layout.feedbackHeight(showError)
+end
 
 return layout

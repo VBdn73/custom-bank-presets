@@ -1,6 +1,6 @@
 # Custom bank presets
 
-Give your RuneScape bank presets custom names, colours, icons, and icon text. Version **0.8.0**
+Give your RuneScape bank presets custom names, colours, icons, and icon text. Version **0.8.1**
 changes their appearance locally, not their server-side names or behaviour.
 
 ## Features
@@ -69,17 +69,12 @@ Customisations can only be edited inside the bank. Display preferences persist a
 Failed saves or customisation swaps attempt best-effort recovery and report failures;
 native bank preset swaps are not undone.
 
-Plugin Hub settings also include an item-name search with a scrollable list, icons,
-and a selected-item preview. Names are indexed in batches after typing, so results
-may be incomplete while indexing. Selection is a preview and does not change a preset.
-The search scans IDs 0–70,000 and may show placeholders, duplicates or inaccessible
-definitions; review it against Jagex's guidelines before distribution. IDs above
-70,000 are not indexed.
-
 ## Permissions and privacy
 
 **Data protection — Case 1 (local only).** No additional permissions, chat access,
 network requests, screenshots, or gameplay-history collection.
+
+This plugin requests no additional permissions.
 
 Settings use the client's `PersistentDB` API. Your display name, preset names,
 colours, icons, and icon text are stored locally per character. Display-name keys ignore case
@@ -120,6 +115,17 @@ Run the mocked regression suite with Lua 5.4:
 lua tests/run.lua
 ```
 
+Run specific suites by supplying their names, for example:
+
+```sh
+lua tests/run.lua name_editor editor_layout item_search
+```
+
+Editor fixtures live in `tests/fixtures/`; layout/scrolling checks are separate
+from editing behaviour. Every suite can run independently. Keep boundary,
+character-isolation, partial-write recovery, and native-UI restoration coverage
+when changing implementation details.
+
 Also test in-client: save/reset, all 18 presets and Beast of Burden, character
 isolation, persistence, swaps, picker positioning, scrolling/resizing, and restoration
 on disable. Check all icon categories on both compact pages, background visibility,
@@ -131,6 +137,8 @@ Mocked tests do not replace visual and interaction checks.
 - `main.lua`: lifecycle and editor entry points.
 - `bank/`: UI bindings, labels, colours, icons, and context menus.
 - `editor/`: editor layout, preview, help, and PrettyUI integration.
+- `editor/name_preview.lua`: native input alignment and clipped preview styling.
+- `editor/views.lua`: settings/ribbon refresh and cleanup ownership.
 - `presets/`: validation, per-character storage, and icon catalogue.
 - `components/`: reusable colour and icon pickers.
 - `tests/`: mocked regression suites; `plugin.json`: manifest and dependency.

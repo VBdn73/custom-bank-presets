@@ -1,5 +1,6 @@
 local colourValue = require("presets/colour_value")
 local slots = require("presets/slots")
+local constants = require("constants")
 local customisations = {}
 
 -- Dependencies are explicit so editor and native-swap entry points share one path.
@@ -23,7 +24,7 @@ function customisations.new(names, colours, icons, iconText)
                     get = function() return names.get(change.slot) or "" end,
                     save = function(v) return names.save(change.slot, v) end }
                 if colours then
-                    for _, kind in ipairs({ "background", "text" }) do
+                    for _, kind in ipairs(constants.colourKinds) do
                         local colour = change[kind]
                         local normalized = colour == "" and "" or colourValue.normalize(colour)
                         assert(normalized, "Invalid colour selection.")

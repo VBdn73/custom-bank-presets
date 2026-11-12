@@ -1,20 +1,11 @@
 -- Reusable native-asset picker with a virtualized scrolling grid.
 local picker = {}
+local constants = require("constants")
+local overlayPosition = require("components/overlay_position")
 local defaultTheme = {
     border = { 0.58, 0.48, 0.28, 1 },
     background = { 0.14, 0.13, 0.11, 1 },
 }
-
-local function globalPosition(component)
-    local position = component.xyGlobal
-    if position then return position.x, position.y end
-    local x, y = component.x or 0, component.y or 0
-    if component.parent then
-        local px, py = globalPosition(component.parent)
-        x, y = x + px, y + py
-    end
-    return x, y
-end
 
 function picker.open(host, options)
     options = options or {}
@@ -46,13 +37,7 @@ function picker.open(host, options)
     local width, height, updateSearchIndex, updateScroll
     local function updatePosition()
         if closed then return end
-        local target = options.anchor or host
-        local ax, ay = globalPosition(target)
-        local px, py = globalPosition(parent)
-        local x, y = ax - px + target.width + 8, ay - py
-        if x + width > parent.width then x = ax - px - width - 8 end
-        root:SetPos(math.max(0, math.min(x, parent.width - width)),
-            math.max(0, math.min(y, parent.height - height)))
+        overlayPosition.beside(root, parent, options.anchor or host, width, height)
     end
     local function build()
         local theme = options.theme or defaultTheme
@@ -163,9 +148,9 @@ function picker.open(host, options)
             updateSearchIndex = function()
                 if options.searchIndex.next > options.searchIndex.maxId
                     or not (config and config.Obj and config.Obj.FromID) then return end
-                local done = options.searchIndex.step(500, config.Obj.FromID)
+                local done = options.searchIndex.step(constants.itemSearchBatchSize, config.Obj.FromID)
                 if categories[categoryIndex] == searchCategory and searchField.content:match("%S")
-                    and (done or options.searchIndex.next % 5000 == 0) then updateSearch(false) end
+                    and (done or options.searchIndex.next % constants.itemSearchRefreshInterval == 0) then updateSearch(false) end
             end
         end
         local reportedErrors = {}

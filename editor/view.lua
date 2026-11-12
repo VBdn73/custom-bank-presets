@@ -8,10 +8,11 @@ local iconCatalogue = require("presets/icon_catalogue")
 local colourValue = require("presets/colour_value")
 local slots = require("presets/slots")
 local info = require("editor/info")
-local bankAppearance = require("bank/appearance")
-local bankLabels = require("bank/labels")
+local namePreview = require("editor/name_preview")
 local bankPreview = require("bank/preview")
 local customisations = require("presets/customisations")
+local overlays = require("editor/overlays")
+local defaultMarksView = require("editor/default_marks")
 local editor = {}
 
 local function createText(parent, content, font)
@@ -50,6 +51,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         parent = scrollView.content
         contentHost = scrollView
     end
+    local attachOverlay = overlays.attachTo(contentHost)
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
     local contentWidth = layout.width
@@ -312,37 +314,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
             end
         end
     end
-    local alignmentContent, alignmentWidth, alignmentHeight, alignmentFont
-    local nativeTextVisible = false
+    local inputPreview = namePreview.new(nameInput, managedInput, defaultNamePreview, previewBackground, bindings)
     local function refreshInputAlignment()
-        if not previewBackground then return end
-        local content, width, height = nameInput.content or "", nameInput.width, nameInput.height
-        local fontID = nameInput.text.font
-        local font = config.Font.FromID(fontID)
-        local textWidth = content ~= "" and font:GetStringWidth(content, true) or 0
-        nativeTextVisible = textWidth > math.max(1, width - 16)
-        defaultNamePreview.hidden = nativeTextVisible
-        defaultNamePreview.content = content ~= "" and content
-            or bankLabels.original(bindings.labels, selectedSlot) or "Uses predefined name"
-        local clipped = managedInput and managedInput._unclippedAppearance
-        local rgba = nativeTextVisible and (defaultNamePreview.rgba or 0) or 0
-        if clipped then clipped.textRGBA = rgba
-        else
-            nameInput.text.rgba = rgba
-            if not nativeTextVisible then nameInput.text.isShadowed = false end
-        end
-        if content == alignmentContent and width == alignmentWidth
-            and height == alignmentHeight and fontID == alignmentFont then return end
-        alignmentContent, alignmentWidth, alignmentHeight, alignmentFont = content, width, height, fontID
-        -- Native fields honour text alignment only for their placeholder.
-        -- Move the editable origin, retaining native caret and selection.
-        local left = math.min(255, math.max(8, math.floor((width - textWidth - 2) / 2)))
-        -- Centre the visible glyph bounds, not the font's line spacing.
-        -- Native inputs place the baseline at top + font.baseline.
-        local centredBaseline = math.floor((height - font.maxAscent - font.maxDescent) / 2)
-            + font.maxAscent
-        local top = math.min(255, math.max(0, centredBaseline - font.baseline))
-        nameInput.contentMargin = ui.Margin.new(left, top, 8, 0)
+        inputPreview.align(selectedSlot)
     end
 
     local statusLabel = createText(parent, "", smallFont)
@@ -361,7 +335,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     local function setStatus(message, succeeded, action)
         if options.compactFeedback then
-            feedbackTicks = succeeded and action == "save" and 120 or 0
+            feedbackTicks = succeeded and action == "save" and constants.saveFeedbackTicks or 0
             defaultsStaged = succeeded and action == "reset"
             local showError = not succeeded and message ~= nil and message ~= ""
             if feedbackError ~= showError then
@@ -372,7 +346,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             statusLabel.content = showError and message or ""
             updateButtonLabels()
         else
-        statusLabel.content = message
+            statusLabel.content = message
         end
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
@@ -396,38 +370,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local function refreshColours()
         if not bindings.colours then return end
         refreshDecorations()
-        local visual = bankLabels.visual(bindings.labels, selectedSlot)
-        local clipped = managedInput and managedInput._unclippedAppearance
-        if visual then
-            if visual.font ~= nil then nameInput.text.font = visual.font end
-            if visual.shadowRGBA ~= nil then nameInput.text.shadowRGBA = visual.shadowRGBA end
-            if visual.isShadowed ~= nil then
-                if clipped then clipped.isShadowed = visual.isShadowed
-                else nameInput.text.isShadowed = visual.isShadowed end
-            end
-        end
-        defaultNamePreview.font = nameInput.text.font
-        defaultNamePreview.isShadowed = not visual or visual.isShadowed ~= false
-        refreshInputAlignment()
-        local background = colourValue.rgba(pendingColours.background)
-            or bankAppearance.original(bindings.appearance, selectedSlot, "background")
-            or 0x292520FF
-        local text = colourValue.rgba(pendingColours.text)
-            or bankAppearance.original(bindings.appearance, selectedSlot, "text")
-            or 0xB8AD9DFF
-        previewBackground.rgba = background
-        defaultNamePreview.rgba = text
-        -- PrettyUI temporarily makes native text transparent when clipped.
-        -- Update its restore state instead of leaking text outside the viewport.
-        if clipped then
-            clipped.textRGBA, clipped.emptyTextRGBA, clipped.caretRGBA = nativeTextVisible and text or 0, text, text
-            clipped.isShadowed = nativeTextVisible and defaultNamePreview.isShadowed or false
-        else
-            nameInput.text.rgba = nativeTextVisible and text or 0
-            nameInput.text.isShadowed = nativeTextVisible and defaultNamePreview.isShadowed or false
-            nameInput.emptyTextRGBA = text
-            nameInput.caretRGBA = text
-        end
+        inputPreview.update(selectedSlot, pendingColours)
         for kind, control in pairs(colourControls) do
             local value = pendingColours[kind]
             local hex = colourValue.normalize(value)
@@ -436,7 +379,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
     end
     if bindings.colours then
-        for index, kind in ipairs({ "background", "text" }) do
+        for index, kind in ipairs(constants.colourKinds) do
             local y = layout.rows.colourLabel + (index - 1) * 32
             local label = createText(parent, kind == "background" and "Background colour" or "Text colour", smallFont)
             if options.bankButtons then label.colour = theme.colour(theme.titleText) end
@@ -471,28 +414,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
             resetColour:SetSize(22, 22)
             trackPosition(resetColour, layout.swatchX + 66, y - 1)
             updateColourResetIcons[#updateColourResetIcons + 1] = updateReset
-            defaultMarks[kind] = {}
-            -- Blend neighbouring pixels according to the fractional line position.
-            -- Native rectangles do not need rotation and remain click-through.
-            for column = 0, 49 do
-                local offset = column * 15 / 49
-                for _, position in ipairs({ offset, 15 - offset }) do
-                    local row = math.floor(position)
-                    local fraction = position - row
-                    for _, pixel in ipairs({ { row, 1 - fraction }, { row + 1, fraction } }) do
-                        if pixel[2] > 0 then
-                            local mark = ui.Rectangle.new(parent)
-                            mark:SetSize(1, 1)
-                            mark.fill = true
-                            mark.colour = theme.colour({ 1, 1, 1, pixel[2] })
-                            mark.clickthrough = true
-                            trackPosition(mark, layout.swatchX + 4 + column, y + 2 + pixel[1])
-                            defaultMarks[kind][#defaultMarks[kind] + 1] = mark
-                            defaultMarkKinds[mark] = kind
-                        end
-                    end
-                end
-            end
+            defaultMarks[kind] = defaultMarksView.new(parent, layout.swatchX + 4, y + 2, trackPosition)
+            for _, mark in ipairs(defaultMarks[kind]) do defaultMarkKinds[mark] = kind end
             control:Subscribe(ui.Hook.ONCLICK, function()
                 local toggleClosed = pickerKind == kind
                 dismissPicker()
@@ -504,22 +427,18 @@ function editor.build(parent, names, bindings, initialSlot, options)
                     initial = colourValue.normalize(pendingColours[kind]),
                     anchor = control,
                     theme = theme,
-                    attachOverlay = contentHost and contentHost._RegisterOverlay and function(root, updatePosition)
-                        contentHost:_RegisterOverlay(root, nil, updatePosition)
-                        contentHost:_SyncOverlays(false)
-                        return function() contentHost:_UnregisterOverlay(root) end
-                    end or nil,
+                    attachOverlay = attachOverlay,
                     onChange = function(value)
-                    if selectedSlot ~= slot or names.getContext() ~= context then return end
-                    pendingColours[kind] = value
-                    clearStatus()
-                    refreshColours()
-                    refreshUnsavedChanges()
+                        if selectedSlot ~= slot or names.getContext() ~= context then return end
+                        pendingColours[kind] = value
+                        clearStatus()
+                        refreshColours()
+                        refreshUnsavedChanges()
                     end,
                     onClose = function()
-                    closePicker = nil
-                    updatePicker = nil
-                    pickerKind = nil
+                        closePicker = nil
+                        updatePicker = nil
+                        pickerKind = nil
                     end,
                 })
             end)
@@ -587,11 +506,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 searchIndex = require("presets/item_search"),
                 initialName = iconCatalogue.displayName(pendingIcon),
                 resolve = iconCatalogue.resolve, apply = iconCatalogue.apply, anchor = iconControl, theme = theme,
-                attachOverlay = contentHost and contentHost._RegisterOverlay and function(root, updatePosition)
-                    contentHost:_RegisterOverlay(root, nil, updatePosition)
-                    contentHost:_SyncOverlays(false)
-                    return function() contentHost:_UnregisterOverlay(root) end
-                end or nil,
+                attachOverlay = attachOverlay,
                 onSelect = function(value)
                     if selectedSlot ~= slot or names.getContext() ~= context then return end
                     pendingIcon = value
@@ -613,14 +528,15 @@ function editor.build(parent, names, bindings, initialSlot, options)
         iconTextComponents[iconTextLabel] = true
         trackPosition(iconTextLabel, layout.padding, layout.rows.colourLabel)
         managedIconText = contentHost and contentHost:AddTextField({
-            absolute = true, x = 0, y = 0, width = 58, height = 26, maxLength = 3,
+            absolute = true, x = 0, y = 0, width = 58, height = 26, maxLength = constants.maximumIconTextLength,
             placeholder = "", _scrollController = contentHost._scroll or contentHost,
         })
         iconTextInput = managedIconText and managedIconText.root or ui.InputField.new(parent)
         iconTextInput:SetSize(58, 26)
         iconTextInput.stylesheetID = id.StyleSheet.INPUT_DEFAULT
         if not managedIconText then
-            iconTextInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 3)
+            iconTextInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE,
+                constants.maximumIconTextLength)
         end
         iconTextComponents[iconTextInput] = true
         trackPosition(iconTextInput, layout.swatchX, layout.rows.colourLabel - 3)
@@ -652,7 +568,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     refreshUnsavedChanges = function()
         local dirty = (nameInput.content or "") ~= (names.get(selectedSlot) or "")
         if bindings.colours then
-            for _, kind in ipairs({ "background", "text" }) do
+            for _, kind in ipairs(constants.colourKinds) do
                 local pending = colourValue.normalize(pendingColours[kind]) or ""
                 local saved = colourValue.normalize(bindings.colours.get(selectedSlot, kind)) or ""
                 dirty = dirty or pending ~= saved
@@ -825,7 +741,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             if not (managedInput and control == nameInput) and not (managedIconText and control == iconTextInput) then
                 local kind = defaultMarkKinds[control]
                 local customColour = kind and colourValue.normalize(pendingColours[kind]) ~= nil
-                local nonemptyPreview = control == defaultNamePreview and nativeTextVisible
+                local nonemptyPreview = control == defaultNamePreview and inputPreview.nativeTextVisible
                 control.hidden = not not (customColour or nonemptyPreview or iconHidden[control]
                     or top < 0 or top + control.height > host.height)
             end
@@ -836,9 +752,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local hostHeight = options.formHeight or host.height
         -- Fixed-size hosts keep their established centering; popup hosts fit
         -- the rows that are actually visible for the selected slot.
-        local numbered = not options.formHeight or slots.valid(selectedSlot)
-        local extraHeight = (numbered and bindings.icons and layout.iconHeight or 0)
-            + (numbered and bindings.iconText and layout.iconTextHeight or 0)
+        local extraHeight = layout.customisationHeight(bindings, options.formHeight and selectedSlot or 1)
         local contentHeight = (options.hideTitle and layout.compactBodyHeight or layout.compactHeight)
             + (bindings.colours and layout.colourHeight or 0) + extraHeight - headingGapReduction
         local minimumHeight = (bindings.colours and layout.minimumColourHeight or layout.minimumHeight)
@@ -846,7 +760,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             - (options.hideTitle and layout.titleHeight or 0)
             - headingGapReduction
         if options.compactFeedback then
-            local adjustment = feedbackError and layout.popupErrorExtraHeight or -layout.popupFeedbackHeight
+            local adjustment = layout.feedbackHeight(feedbackError)
             contentHeight = contentHeight + adjustment
             minimumHeight = minimumHeight + adjustment
         end

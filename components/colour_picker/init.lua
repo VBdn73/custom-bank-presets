@@ -1,4 +1,5 @@
 local colourValue = require("components/colour_picker/value")
+local overlayPosition = require("components/overlay_position")
 local picker = {}
 local defaultTheme = {
     border = { 0.58, 0.48, 0.28, 1 },
@@ -54,26 +55,9 @@ function picker.open(host, options)
     -- Empty popup space must consume clicks rather than forwarding them to
     -- the game world. Child controls retain their own pointer handlers.
     root:Subscribe(ui.Hook.ONCLICK, function() return true end)
-    local function globalPosition(component)
-        local position = component.xyGlobal
-        if position then return position.x, position.y end
-        -- Also supports simple local-coordinate hosts used in tests.
-        local x, y = component.x or 0, component.y or 0
-        if component.parent then
-            local px, py = globalPosition(component.parent)
-            x, y = x + px, y + py
-        end
-        return x, y
-    end
     local function updatePosition()
         if closed then return end
-        local target = anchor or host
-        local ax, ay = globalPosition(target)
-        local px, py = globalPosition(parent)
-        local x, y = ax - px + target.width + 8, ay - py
-        if x + width > parent.width then x = ax - px - width - 8 end
-        root:SetPos(math.max(0, math.min(x, parent.width - width)),
-            math.max(0, math.min(y, parent.height - height)))
+        overlayPosition.beside(root, parent, anchor or host, width, height)
     end
     updatePosition()
     local function consumeClick() return true end
