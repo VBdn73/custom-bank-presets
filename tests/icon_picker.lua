@@ -277,9 +277,9 @@ test.case("Empty categories can be hidden or show a message", function()
     local f = fixture()
     f.options.categories[2] = { key = "empty", name = "Extra", entries = {}, showWhenEmpty = true,
         emptyMessage = "No entries yet." }
-    f.options.categories[3] = { key = "bosses", name = "Bosses", entries = {} }
+    f.options.categories[3] = { key = "hidden", name = "Hidden", entries = {} }
     f.open()
-    test.equal(#f.find("Button", function(c) return c.label == "Bosses" end), 0)
+    test.equal(#f.find("Button", function(c) return c.label == "Hidden" end), 0)
     test.equal(#f.tiles(), 3)
     f.find("Button", function(c) return c.label == "Extra" end)[1].hooks.press()
     test.equal(#f.tiles(), 0)
@@ -290,9 +290,9 @@ test.case("Empty categories can be hidden or show a message", function()
 end)
 
 test.case("Picker allows resetting when all categories are empty", function()
-    local f = fixture({ categories = { { key = "bosses", name = "Bosses", entries = {} } } })
+    local f = fixture({ categories = { { key = "hidden", name = "Hidden", entries = {} } } })
     f.open()
-    test.equal(#f.find("Button", function(c) return c.label == "Bosses" end), 0)
+    test.equal(#f.find("Button", function(c) return c.label == "Hidden" end), 0)
     test.equal(#f.find("Text", function(c) return c.content == "No icons available." end), 1)
     f.find("Button", function(c) return c.label == "Use preset number" end)[1].hooks.press()
     test.equal(f.selected[1], "")

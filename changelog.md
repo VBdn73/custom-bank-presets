@@ -6,7 +6,7 @@
 - Added up to three letters or numbers of icon text to numbered presets, shown in previews, bank rows, and compact buttons.
 - Added the Bag tab for selecting item artwork from the backpack; saved icons remain available after the item leaves it.
 - Expanded the weapon catalogue and improved item icon sizing and alignment.
-- Wrapped icon-picker tabs to fit, reserved a Bosses category, and hid empty categories except Bag.
+- Wrapped icon-picker tabs to fit and hid empty categories except Bag.
 - Added an unsaved-changes indicator to the editor.
 - Expanded regression tests for icon text, backpack icons, and picker rendering.
 
