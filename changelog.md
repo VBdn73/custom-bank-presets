@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 - 2026-11-12
+
+- Added item-artwork search, replacing the Bag, Weapons, and Holidays tabs.
+- Indexed item names in batches and filtered duplicate, broken, damaged, uncharged, and augmented items.
+- Added icon-name tooltips, a picker scrollbar, and a Blank icon option.
+- Refined the editor layout and controls to match the native bank UI; shortened the Beast of Burden editor.
+- Refactored colour and icon pickers and expanded regression tests.
+
 ## 0.8.0 - 2026-11-03
 
 - Renamed the plugin to Custom bank presets.
