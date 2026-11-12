@@ -161,11 +161,11 @@ function picker.open(host, options)
                 return false
             end)
             updateSearchIndex = function()
-                if categories[categoryIndex] ~= searchCategory or not searchField.content:match("%S")
-                    or options.searchIndex.next > options.searchIndex.maxId
+                if options.searchIndex.next > options.searchIndex.maxId
                     or not (config and config.Obj and config.Obj.FromID) then return end
                 local done = options.searchIndex.step(500, config.Obj.FromID)
-                if done or options.searchIndex.next % 5000 == 0 then updateSearch(false) end
+                if categories[categoryIndex] == searchCategory and searchField.content:match("%S")
+                    and (done or options.searchIndex.next % 5000 == 0) then updateSearch(false) end
             end
         end
         local reportedErrors = {}
@@ -179,7 +179,7 @@ function picker.open(host, options)
             local y = 40 + math.floor((index - 1) / tabColumns) * 32
             button(root, x, y, math.floor(tabWidth) - 2, 28, category.name, function()
                 categoryIndex = index
-                refresh(true)
+                if category == searchCategory then updateSearch(true) else refresh(true) end
             end)
             tabFrames[index] = rectangle(root, x, y, math.floor(tabWidth) - 2, 28, false, theme.border)
         end
@@ -190,6 +190,9 @@ function picker.open(host, options)
             if scroll then scroll:Destroy(); scroll = nil; grid = nil end
             if tooltip then tooltip:Destroy() end
             local category = categories[categoryIndex] or {}
+            selectedName.content = category == searchCategory and searchField.content:match("%S")
+                and options.searchIndex.next <= options.searchIndex.maxId
+                and "Indexing... Results may be incomplete" or initialName
             gridY = searchY + (category == searchCategory and 32 or 0)
             footerY = gridY + rows * 44
             height = footerY + 68

@@ -37,7 +37,9 @@ do not download dependencies automatically.
    colour canvas or enter `#RRGGBB`; changes preview immediately.
 3. For numbered presets, click **Icon**, choose a category, and select an icon.
    Hover an icon to see its name. **Blank** hides the icon and number; **Use preset number** restores the default.
-   Empty categories are hidden. The **Search** tab also offers item artwork.
+   Empty categories are hidden. The **Search** tab also offers item artwork. Item names
+   are indexed in batches while the icon picker is open, so search results can be
+   incomplete until indexing finishes. Progress is retained for the plugin session.
 4. Optionally enter up to three letters or numbers in **Icon text**. Click **Save**,
    or press Enter in the name field, to apply your changes.
 

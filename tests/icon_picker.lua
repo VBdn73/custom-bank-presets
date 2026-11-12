@@ -31,6 +31,7 @@ local function fixture(options)
                 RS3_BTN_MODAL_WINDOW_1_CLOSE_OVR = 21 } },
         Vector4 = { new = function(...) return { ... } end },
     }, { __index = _G })
+    f.environment = environment
     for _, kind in ipairs({ "Layer", "Rectangle", "Text", "Button", "Sprite", "InputField" }) do
         environment.ui[kind] = { new = function(parent) return new(kind, parent) end }
     end
@@ -131,6 +132,44 @@ test.case("Search tab displays selectable item tiles and scrolls results", funct
     f.update()
     f.tiles()[1].hooks.press()
     test.equal(f.selected[1], "item:7")
+end)
+
+test.case("Indexing starts on opening, pauses on close and resumes with partial results", function()
+    local steps = 0
+    local index = { next = 0, maxId = 5499 }
+    function index.step(limit, lookup)
+        test.equal(limit, 500)
+        test.equal(lookup(1).name, "Widget")
+        steps = steps + 1
+        index.next = math.min(index.next + limit, index.maxId + 1)
+        return index.next > index.maxId
+    end
+    function index.search(query)
+        return query == "widget" and index.next > 0 and { { id = 1, name = "Widget" } } or {}
+    end
+    local f = fixture({ searchIndex = index, resolve = function() return 1 end,
+        apply = function(sprite, assetID) sprite.sprite = assetID end })
+    f.environment.config = { Obj = { FromID = function() return { name = "Widget" } end } }
+    f.open()
+    f.update() -- The Skills tab is selected, and the search field is empty.
+    test.equal(steps, 1)
+    f.close()
+    f.update()
+    test.equal(steps, 1)
+    f.open()
+    f.find("Button", function(c) return c.label == "Search" end)[1].hooks.press()
+    local field = f.find("InputField")[1]
+    field.content = "widget"
+    field.hooks.change(field, 1)
+    test.equal(#f.tiles(), 1)
+    test.equal(#f.find("Text", function(c) return c.content == "Indexing... Results may be incomplete" end), 1)
+    for _ = 1, 10 do f.update() end
+    test.equal(steps, 11)
+    test.equal(#f.find("Text", function(c) return c.content == "Indexing... Results may be incomplete" end), 0)
+    test.equal(#f.tiles(), 1)
+    f.update()
+    test.equal(steps, 11)
+    f.close()
 end)
 
 test.case("Search opens first when no icon is selected", function()
