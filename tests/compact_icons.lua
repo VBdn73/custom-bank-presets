@@ -101,6 +101,24 @@ local function fixture()
     return f
 end
 
+test.case("Blank hides compact numbers and follows page changes", function()
+    local f = fixture()
+    f.selected[1] = "blank"
+    f.update()
+    test.equal(f.labels[1].rgba & 0xFF, 0)
+    test.equal(f.labels[1].content, "1")
+    test.equal(f.live(), 0)
+    f.page(9)
+    f.update()
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+    f.page(0)
+    f.update()
+    test.equal(f.labels[1].rgba & 0xFF, 0)
+    f.selected[1] = nil
+    f.update()
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+end)
+
 test.case("Compact item canvas expands within the button interior and follows resizing", function()
     local f = fixture()
     f.selected[1] = "item"

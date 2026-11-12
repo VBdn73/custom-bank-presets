@@ -49,7 +49,8 @@ local function apply(binding, store, colours, textStore)
     local parent = number.parent
     local slot = binding.slot == bob and bob or displayedSlot(number.content, index)
     if not slot or not parent or parent.isRestricted then release(index); return end
-    local spriteID, entry = catalogue.resolve(store.get(slot))
+    local iconKey = store.get(slot)
+    local spriteID, entry = catalogue.resolve(iconKey)
     local iconText = slot ~= bob and textStore and textStore.get(slot) or ""
     if slot == bob then
         -- BoB retains its native artwork; only mirror it while a background is
@@ -66,7 +67,7 @@ local function apply(binding, store, colours, textStore)
     elseif number.type ~= ui.ComponentType.LABEL then
         release(index); return
     end
-    if not spriteID and iconText == "" then release(index); return end
+    if not spriteID and iconText == "" and (slot == bob or iconKey ~= "blank") then release(index); return end
     local state = states[index]
     if state and (state.number ~= number or state.parent ~= parent
         or state.slot ~= slot or state.spriteID ~= spriteID) then

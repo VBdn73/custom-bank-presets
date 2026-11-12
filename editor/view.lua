@@ -259,8 +259,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local text = iconTextInput and iconTextInput.content or ""
         local hasText = slots.valid(selectedSlot) and text ~= ""
         if previewNumber then
-            previewNumber.hidden = active or hasText
-            iconHidden[previewNumber] = active or hasText
+            previewNumber.hidden = active or hasText or (supported and pendingIcon == "blank")
+            iconHidden[previewNumber] = previewNumber.hidden
         end
         if previewIconText then
             previewIconText.content = text
@@ -284,8 +284,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
                     iconControl.y + math.floor((iconControl.height - iconControlSprite.height) / 2))
             end
             iconControlNumber.content = tostring(selectedSlot)
-            iconControlNumber.hidden = not supported or available
-            iconHidden[iconControlNumber] = not supported or available
+            iconControlNumber.hidden = not supported or available or pendingIcon == "blank"
+            iconHidden[iconControlNumber] = iconControlNumber.hidden
             if not supported then
                 iconControlSprite.hidden = true
                 iconHidden[iconControlSprite] = true

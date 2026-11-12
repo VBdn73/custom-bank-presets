@@ -4,6 +4,7 @@ local catalogue = { categories = {
     (require("presets/icon_categories/misc")),
 } }
 local byKey, categoryKeys = {}, {}
+local blank = { key = "blank", name = "Blank" }
 for _, category in ipairs(catalogue.categories) do
     assert(not categoryKeys[category.key], "Duplicate icon category: " .. category.key)
     categoryKeys[category.key] = true
@@ -18,6 +19,7 @@ end
 -- An empty key means the native number; unknown keys have the same fallback.
 function catalogue.get(key)
     if type(key) ~= "string" then return nil end
+    if key == blank.key then return blank end
     if byKey[key] then return byKey[key] end
     -- Item search selections are stored by object ID.
     local digits = key:match("^item:([1-9]%d*)$")
@@ -55,6 +57,7 @@ end
 function catalogue.resolve(key, sprites)
     local entry = catalogue.get(key)
     if not entry then return nil end
+    if entry == blank then return nil end
     if entry.objectID then return entry.objectID, entry end
     sprites = sprites or (id and id.Sprite)
     if not sprites then return nil end

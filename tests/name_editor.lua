@@ -1375,6 +1375,19 @@ local function iconFixture(mockPicker)
     return f
 end
 
+test.case("Blank selection leaves the icon control empty and survives reopening", function()
+    local f = iconFixture()
+    f:stageIcon("blank")
+    test.equal(f:iconNumber().hidden, true)
+    f:stageIcon("")
+    test.equal(f:iconNumber().hidden, false)
+    f:stageIcon("blank")
+    f:clickSave()
+    test.equal(f.iconData[1], "blank")
+    f:open()
+    test.equal(f:iconNumber().hidden, true)
+end)
+
 test.case("Editor icon choices are staged, previewed, saved and restored on reopen", function()
     local f = iconFixture()
     f:stageIcon("skills:necromancy")

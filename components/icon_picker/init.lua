@@ -198,7 +198,10 @@ function picker.open(host, options)
                 refresh()
             end, { x = width - 40, y = 0, size = 28 })
         end
-        local resetButton = button(root, 12, height - 40, innerWidth, 28, "Use preset number", function() select("") end)
+        local resetWidth = math.floor((innerWidth - 4) / 2)
+        local resetButton = button(root, 12, height - 40, resetWidth, 28, "Use preset number", function() select("") end)
+        local blankButton = button(root, 16 + resetWidth, height - 40, innerWidth - resetWidth - 4, 28,
+            "Blank", function() select("blank") end)
         for index, category in ipairs(categories) do
             local tabWidth = innerWidth / tabColumns
             local x = 12 + math.floor(((index - 1) % tabColumns) * tabWidth)
@@ -222,6 +225,7 @@ function picker.open(host, options)
             background:SetSize(width - 2, height - 2)
             selectedName:SetPos(12, footerY + 4)
             resetButton:SetPos(12, height - 40)
+            blankButton:SetPos(16 + resetWidth, height - 40)
             if pageLayer then pageLayer:SetPos(0, footerY + 30) end
             updatePosition()
             grid = ui.Layer.new(root)

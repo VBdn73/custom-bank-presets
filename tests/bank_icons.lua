@@ -89,6 +89,20 @@ local function fixture()
     return f
 end
 
+test.case("Blank hides the bank number and restores it on reset", function()
+    local f = fixture()
+    f.selected[1] = "blank"
+    f.update()
+    test.equal(f.numbers[1].content, "")
+    test.equal(f.live(), 0)
+    f.numbers[1].content = "1"
+    f.update()
+    test.equal(f.numbers[1].content, "")
+    f.selected[1] = nil
+    f.update()
+    test.equal(f.numbers[1].content, "1")
+end)
+
 test.case("Bank icon text replaces numbers, overlays icons and restores native labels", function()
     local f = fixture()
     f.iconTexts[1] = "WAS"

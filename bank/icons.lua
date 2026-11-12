@@ -38,10 +38,11 @@ end
 
 local function apply(binding, store, textStore)
     local slot = binding.slot
-    local spriteID, entry = catalogue.resolve(store.get(slot))
+    local iconKey = store.get(slot)
+    local spriteID, entry = catalogue.resolve(iconKey)
     local iconText = textStore and textStore.get(slot) or ""
     local number = resolve(binding)
-    if (not spriteID and iconText == "") or not editable(number) then release(slot); return end
+    if (not spriteID and iconText == "" and iconKey ~= "blank") or not editable(number) then release(slot); return end
     local parent = number.parent
     if not parent or parent.isRestricted then release(slot); return end
     local state = states[slot]

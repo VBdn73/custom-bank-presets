@@ -36,7 +36,7 @@ do not download dependencies automatically.
 2. Enter a name and click the background/text swatches to choose colours. Use the
    colour canvas or enter `#RRGGBB`; changes preview immediately.
 3. For numbered presets, click **Icon**, choose a category, and select an icon.
-   Hover an icon to see its name. **Use preset number** restores the default.
+   Hover an icon to see its name. **Blank** hides the icon and number; **Use preset number** restores the default.
    Empty categories are hidden. The **Search** tab also offers item artwork.
 4. Optionally enter up to three letters or numbers in **Icon text**. Click **Save**,
    or press Enter in the name field, to apply your changes.

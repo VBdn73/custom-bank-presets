@@ -212,6 +212,18 @@ test.case("Default-number action clears selection and unknown initial keys remai
     test.equal(f.selected[1], "")
 end)
 
+test.case("Blank action sits beside the preset number and selects blank", function()
+    local f = fixture()
+    f.open()
+    local number = f.find("Button", function(c) return c.label == "Use preset number" end)[1]
+    local blank = f.find("Button", function(c) return c.label == "Blank" end)[1]
+    test.equal(blank.y, number.y)
+    test.equal(blank.x >= number.x + number.width, true)
+    blank.hooks.press()
+    test.equal(f.selected[1], "blank")
+    test.equal(f.closed, 1)
+end)
+
 test.case("Picker overlay follows its anchor, flips, clamps and tolerates detach failure", function()
     local f = fixture()
     f.open()
